@@ -1258,6 +1258,11 @@ class LSTM(VanillaRNN):
         
         if all([type(x)==int for x in init]):
             Nx,Nh,Ny = init
+            wz,bz = random_weight_init([Nx,Nh,Nh], bias=True)
+            wr,br = random_weight_init([Nx,Nh,Nh], bias=True)     
+
+        if all([type(x)==int for x in init]):
+            Nx,Nh,Ny = init
             Wi,bi = random_weight_init([Nx,Nh,Nh], bias=True)
             Wf,bf = random_weight_init([Nx,Nh,Nh], bias=True)
             Wo,bo = random_weight_init([Nx,Nh,Nh], bias=True)
@@ -1312,10 +1317,10 @@ class LSTM(VanillaRNN):
 class nnLSTM(VanillaRNN): 
     """Should be identical to implementation above, but uses PyTorch internals for LSTM layer instead"""
     def __init__(self, init, f=None, fOut=torch.sigmoid): #f is ignored. Included to have same signature as VanillaRNN
-        super(VanillaRNN,self).__init__()
-        
+        super(nnLSTM, self).__init__(init, resetState=False, netType='LSTM', verbose=verbose, **rnnArgs)
+
         Nx,Nh,Ny = init #TODO: allow manual initialization       
-        self.lstm = nn.LSTMCell(Nx,Nh)
+        self.lstm = nn.LSTMCell(Nx, Nh)
         
         Wy,by = random_weight_init([Nh,Ny], bias=True)           
         self.Wy = nn.Parameter(torch.tensor(Wy[0],  dtype=torch.float))
@@ -1326,14 +1331,211 @@ class nnLSTM(VanillaRNN):
         self.fOut = fOut
         
         self.reset_state()
-
         
     def reset_state(self):
-        self.h = torch.zeros(1,self.lstm.hidden_size)
-        self.c = torch.zeros(1,self.lstm.hidden_size)
+        self.h = torch.zeros(1, self.lstm.hidden_size)
+        self.c = torch.zeros(1, self.lstm.hidden_size)
     
     
     def forward(self, x):
         self.h, self.c = self.lstm(x.unsqueeze(0), (self.h, self.c))
         y = self.fOut( F.linear(self.h, self.Wy, self.by) ) 
         return y
+
+# Really sloppy implementation of two-layer FF network from Vanilla class
+class FeedForward(StatefulBase):
+    def __init__(self, init, verbose=True, resetState=True, netType='FeedForward', **rnnArgs):
+        super(FeedForward,self).__init__()
+        
+        if all([type(x)==int for x in init]):
+            Nx,Nh,Ny = init
+            W,b = random_weight_init([Nx,Nh,Nh,Ny], bias=True)
+
+            self.n_inputs = Nx
+            self.n_hidden = Nh
+            self.n_outputs = Ny 
+        else:
+            W,b = init
+
+        self.verbose=verbose
+        init_string = 'Net parameters:\n  Net Type: {}'.format(netType)
+
+        self.loss_fn = F.cross_entropy # Reductions is mean by default
+        # self.acc_fn = binary_classifier_accuracy 
+        self.acc_fn = xe_classifier_accuracy 
+        
+        self.fAct = rnnArgs.pop('fAct', 'sigmoid') # hidden activation
+        if self.fAct  == 'linear':
+            self.f = None
+        elif self.fAct  == 'sigmoid':
+            self.f = torch.sigmoid
+        elif self.fAct  == 'tanh':
+            self.f = torch.tanh
+        elif self.fAct  == 'relu':
+            self.f = torch.relu
+        else:
+            raise ValueError('f activaiton not recognized')
+
+        self.fOutAct = rnnArgs.pop('fOutAct', 'linear') # output activiation   
+        if self.fOutAct == 'linear':
+            self.fOut = None # No activiation function for output
+        else:
+            raise ValueError('f0 activaiton not recognized')
+        init_string += '\n  Structure: f: {} // fOut: {} // (Nx, Nh, Ny) = ({}, {}, {})'.format(self.fAct, self.fOutAct, Nx, Nh, Ny)
+
+        # Determines whether or not input layer is a trainable parameter
+        self.freezeInputs = rnnArgs.pop('freezeInputs', False)
+        if self.freezeInputs: # Does not train input layer or hidden bias (just sets thte latter to zero)
+            init_string += '\n  Winp: Frozen //  '
+            self.register_buffer('w1', torch.tensor(W[0], dtype=torch.float))
+            # self.register_buffer('wr', torch.tensor(W[1], dtype=torch.float))
+        else:
+            init_string += '\n  '
+            self.w1 = nn.Parameter(torch.tensor(W[0],  dtype=torch.float)) # input weights
+            # self.wr  = nn.Parameter(torch.tensor(W[1],  dtype=torch.float)) # recurrent weights
+        self.w2  = nn.Parameter(torch.tensor(W[2],  dtype=torch.float)) # readout weights
+
+        # Determines if hidden bias is trinable or simply not used (can overwhelm noise during delay).
+        # Note this is all skipped if inputs are already frozen (since b1 is already zero)
+        self.hiddenBias = rnnArgs.pop('hiddenBias', True)
+        if self.hiddenBias and not self.freezeInputs:
+            init_string += 'Hidden bias: trainable // '
+            self.b1 = nn.Parameter(torch.tensor(b[1], dtype=torch.float)) # hidden state bias
+        elif self.hiddenBias and self.freezeInputs: # Nonzero but frozen
+            init_string += 'Hidden bias: frozen // '
+            self.register_buffer('b1', torch.tensor(b[1], dtype=torch.float))
+        else: # Frozen at zero
+            init_string += 'No hidden bias // '
+            self.register_buffer('b1', torch.zeros_like(torch.tensor(b[1], dtype=torch.float)))
+        
+        self.roBias = rnnArgs.pop('roBias', True)
+        if self.roBias: # ro bias
+            init_string += 'Readout bias: trainable // '
+            self.b2 = nn.Parameter(torch.tensor(b[2], dtype=torch.float))
+        else:
+            init_string += 'No readout bias // '
+            self.register_buffer('b2', torch.zeros_like(torch.tensor(b[2])))
+
+        # Sparisfies the networks by creating masks
+        self.sparsification = rnnArgs.pop('sparsification', 0.0)
+        if self.sparsification > 0:
+            self.register_buffer('w1Mask', torch.bernoulli((1-self.sparsification)*torch.ones_like(self.w1)))
+            # self.register_buffer('wrMask', torch.bernoulli((1-self.sparsification)*torch.ones_like(self.wr)))
+        init_string += 'Sparsification: {:.2f} // '.format(self.sparsification)
+
+        # Injects noise into the network
+        self.noiseType = rnnArgs.pop('noiseType', None)
+        self.noiseScale = rnnArgs.pop('noiseScale', 0.0)
+        if self.noiseType is None:
+            init_string += 'Noise type: None'
+        elif self.noiseType in ('input', 'hidden',):
+            init_string += 'Noise type: {} (scl: {:.1e})'.format(self.noiseType, self.noiseScale)
+        else:
+            raise ValueError('Noise type not recognized.')
+
+        self.trainableState0 = rnnArgs.pop('trainableState0', False) 
+        if self.trainableState0:
+            # Since random_weight_init creates one extra bias we use that as the initial state
+            self.h0 = nn.Parameter(torch.tensor(b[0], dtype=torch.float)) # initial h0
+            init_string += '\n  h0: trainable'
+        else:
+            self.register_buffer('h0', torch.zeros_like(torch.tensor(b[0], dtype=torch.float)))
+            init_string += '\n  h0: zeros' 
+
+        if self.verbose:
+            print(init_string)
+        
+        if resetState: # Don't want state to be reset when child calls it
+            self.reset_state()
+
+    def reset_state(self, batchSize=1):
+        self.h = torch.ones(batchSize, *self.b1.shape, device=self.b1.device) #shape=[B,Nh]  
+        # print('self:', self.device)
+        # print('h:', self.h.device)
+        # print('h0:', self.h0.device)
+        self.h = self.h * self.h0.unsqueeze(0) # (B, Nh) x (1, Nh)
+        # else:
+        #     self.h = torch.zeros(batchSize, *self.b1.shape, device=self.b1.device) #shape=[B,Nh]  
+
+    def forward(self, x, debug=False, stateOnly=False):
+
+        
+
+        if self.noiseType in ('input',):
+            batch_noise = self.noiseScale*torch.normal(
+                torch.zeros_like(x), 1/np.sqrt(self.n_inputs)*torch.ones_like(x)
+                )
+            x = x+batch_noise 
+
+        # (1, Nh) + [(B, Nx) x (Nx, Nh)] + [(B, Nh) x (Nh, Nh)] = [B, Nh]
+        if self.sparsification > 0:
+            a1 = (self.b1.unsqueeze(0) + 
+                  torch.mm(x, torch.transpose(self.w1Mask*self.w1, 0, 1))) 
+        else:
+            a1 = (self.b1.unsqueeze(0) + 
+                  torch.mm(x, torch.transpose(self.w1, 0, 1)))
+        
+        # Adds noise to the preactivation
+        if self.noiseType in ('hidden',):
+            batch_noise = self.noiseScale*torch.normal(
+                torch.zeros_like(a1), 1/np.sqrt(self.n_hidden)*torch.ones_like(a1)
+                )
+            a1 = a1 + batch_noise 
+
+        h = self.f(a1) if self.f is not None else a2
+        
+        if stateOnly:
+            return h
+        self.h = h
+
+        # (1, Ny) + [(B, Nh) x (Nh, Ny)]
+        a2 = self.b2.unsqueeze(0) + torch.mm(self.h, torch.transpose(self.w2, 0, 1))
+        y = self.fOut(a2) if self.fOut is not None else a2 
+
+        if debug:
+            return a1, self.h, a2, y
+        return y
+
+
+    def evaluate(self, batch):
+        self.reset_state(batchSize=batch[0].shape[0])
+        # Output size can differ from batch[1] size because XE loss is now used 
+        out_size = torch.Size([batch[1].shape[0], batch[1].shape[1], self.n_outputs]) # [B, T, Ny]
+        out = torch.empty(out_size, dtype=torch.float, layout=batch[1].layout, device=batch[1].device)
+
+        for time_idx in range(batch[0].shape[1]):
+
+            x = batch[0][:, time_idx, :] # [B, Nx]
+            out[:, time_idx] = self(x)
+
+        return out
+
+    @torch.no_grad()    
+    def evaluate_debug(self, batch, batchMask=None, acc=True, reset=True):
+        """ Returns internal parameters of the RNN """
+        B = batch[0].shape[0]
+
+        if reset:
+            self.reset_state(batchSize=B)
+
+        Nh,Nx = self.w1.shape
+        Ny,Nh = self.w2.shape 
+
+        T = batch[1].shape[1]
+        db = {'x' : torch.empty(B,T,Nx),
+              'a1' : torch.empty(B,T,Nh),
+              'h' : torch.empty(B,T,Nh),
+              'a2' : torch.empty(B,T,Ny),
+              'out' : torch.empty(B,T,Ny),
+              }
+        for time_idx in range(batch[0].shape[1]):
+            x = batch[0][:, time_idx, :] # [B, Nx]
+            y = batch[1][:, time_idx, :]
+
+            db['x'][:,time_idx,:] = x
+            db['a1'][:,time_idx], db['h'][:,time_idx,:], db['a2'][:,time_idx,:], db['out'][:,time_idx,:] = self(x, debug=True)      
+
+        if acc:
+            db['acc'] = self.accuracy(batch, out=db['out'].to(self.w1.device), outputMask=batchMask).item()  
+                         
+        return db
