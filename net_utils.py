@@ -5,7 +5,7 @@ import numpy as np
 
 # from dt_utils import Timer
 #from networks import HebbDiags
-
+from abc import abstractmethod
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -161,10 +161,9 @@ class NetworkBase(nn.Module):
             out[t] = self(x) #shape=[B,Nx] or [Nx]
         return out
 
-
+    @abstractmethod
     def evaluate_debug(self, batch):
-        """Override this"""
-        raise NotImplementedError
+        pass
 
 
     def accuracy(self, batch, out=None, outputMask=None):
@@ -403,9 +402,9 @@ class StatefulBase(NetworkBase):
 #        super(StatefulNetworkBase,self).__init__(*params)
 #        self.reset_state() 
 
-
+    @abstractmethod
     def reset_state(self):
-        raise NotImplementedError
+        pass
 
 
     def evaluate(self, batch, preserveState=False):
