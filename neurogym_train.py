@@ -132,7 +132,7 @@ def main():
     save_root = './saved_nets/'
 
     net_params = {
-        'netType': 'HebbNet_M', # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
+        'netType': 'FreeNet', # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
         'n_inputs': ob_size,           # input dim
         'n_hidden': 100,                                # hidden dim
         'n_outputs': act_size,         # output dim

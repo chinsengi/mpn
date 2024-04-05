@@ -9,6 +9,7 @@ import torch
 import int_data as syn
 import context_data as context
 from net_utils import random_weight_init
+from FreeNet import FreeNet
 
 
 def default_params(net_params):
@@ -44,17 +45,21 @@ def init_net(net_params, verbose=True):
                               freezeInputs=net_params['freeze_inputs'],
                               sparsification=net_params['sparsification'], noiseType=net_params['noise_type'],
                               noiseScale=net_params['noise_scale'], verbose=verbose)
-    elif net_params['netType'] in ('HebbNet', 'HebbNet_M', 'rHebbNet', 'rHebbNet_M', 'GHU', 'GHU_M'):
+    elif net_params['netType'] in ('HebbNet', 'HebbNet_M', 'rHebbNet', 'rHebbNet_M', 'GHU', 'GHU_M', 'FreeNet'):
         if net_params['netType'] in ('HebbNet_M', 'rHebbNet_M', 'GHU_M'):
             stpType = 'mult'
-        else:
+        elif net_params['netType'] in ('HebbNet', 'rHebbNet', 'GHU'):
             stpType = 'add'
+        elif net_params['netType'] in ('FreeNet'):
+            stpType = 'free'
         if net_params['netType'] in ('HebbNet', 'HebbNet_M'):
             netClass = nets.HebbNet
         elif net_params['netType'] in ('rHebbNet', 'rHebbNet_M'):
             netClass = nets.RecHebbNet
         elif net_params['netType'] in ('GHU', 'GHU_M'):
             netClass = nets.GHU
+        elif net_params['netType'] in ('FreeNet'):
+            netClass = FreeNet
 
         net = netClass([net_params['n_inputs'], net_params['n_hidden'], net_params['n_outputs']],
                        trainableState0=net_params['trainable_state0'], stpType=stpType, 
