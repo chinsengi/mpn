@@ -1,0 +1,12 @@
+paper/__pycache__/
+data/
+res/
+.vscode/
+*.png
+*.out
+run/
+.ipynb_checkpoints/
+*.sh
+*.slurm
+image/
+neurogym/
