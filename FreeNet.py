@@ -357,13 +357,6 @@ class FreeNet(StatefulBase):
         
         if all([type(x)==int for x in init]) and len(init) == 3:
             Nx,Nh,Ny = init
-            # For readouts
-            # W,b = random_weight_init([Nh,Ny], bias=True)
-            readout = nn.Linear(in_features=Nh, out_features=Ny, bias=True)
-            nn.init.xavier_uniform_(readout.weight)
-            if readout.bias is not None:
-                nn.init.xavier_uniform_(readout.bias)
-
             self.n_inputs = Nx
             self.n_hidden = Nh
             self.n_outputs = Ny 
@@ -387,18 +380,14 @@ class FreeNet(StatefulBase):
             raise ValueError('f0 activaiton not recognized')
         
         init_string += '\n  Readout act: {} // '.format(self.fOutAct)
-
-        # Readout layer (always trainable)
-        self.w2 = nn.Parameter(torch.tensor(W[0], dtype=torch.float))
         
         # Determines if readout bias is trainable or simply not used (easier interpretting readouts in the latter)
         self.roBias = mpnArgs.pop('roBias', True)
-        if self.roBias:
-            init_string += 'Readout bias: trainable // '
-            self.b2 = nn.Parameter(torch.tensor(b[0], dtype=torch.float))
-        else:
-            init_string += 'No readout bias // '
-            self.register_buffer('b2', torch.zeros_like(torch.tensor(b[0])))
+        readout = nn.Linear(in_features=Nh, out_features=Ny, bias=self.roBias)
+        nn.init.xavier_uniform_(readout.weight)
+        if readout.bias is not None:
+            nn.init.xavier_uniform_(readout.bias)
+        self.readout = readout
 
         # Injects noise into the network
         self.noiseType = mpnArgs.get('noiseType', None)
@@ -465,7 +454,7 @@ class FreeNet(StatefulBase):
         # print('w2', self.w2.shape)
 
         # (1, Ny) + [(B, Nh,) x (Nh, Ny) = (B, Ny)] = (B, Ny)
-        y_tilde = self.b2.unsqueeze(0) + torch.mm(h.squeeze(dim=2), torch.transpose(self.w2, 0, 1)) #output layer activation
+        y_tilde = self.readout(h) #output layer activation
         y = self.fOut(y_tilde) if self.fOut is not None else y_tilde  
                            
         if debug: # Make a1 and h size [B, Nh]
