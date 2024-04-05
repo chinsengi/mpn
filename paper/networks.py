@@ -1316,7 +1316,7 @@ class LSTM(VanillaRNN):
         
 class nnLSTM(VanillaRNN): 
     """Should be identical to implementation above, but uses PyTorch internals for LSTM layer instead"""
-    def __init__(self, init, f=None, fOut=torch.sigmoid): #f is ignored. Included to have same signature as VanillaRNN
+    def __init__(self, init, verbose=True, f=None, fOut=torch.sigmoid, **rnnArgs): #f is ignored. Included to have same signature as VanillaRNN
         super(nnLSTM, self).__init__(init, resetState=False, netType='LSTM', verbose=verbose, **rnnArgs)
 
         Nx,Nh,Ny = init #TODO: allow manual initialization       

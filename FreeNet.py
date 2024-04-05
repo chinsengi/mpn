@@ -363,6 +363,7 @@ class FreeNet(StatefulBase):
             nn.init.xavier_uniform_(readout.weight)
             if readout.bias is not None:
                 nn.init.xavier_uniform_(readout.bias)
+
             self.n_inputs = Nx
             self.n_hidden = Nh
             self.n_outputs = Ny 

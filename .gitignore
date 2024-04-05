@@ -1,4 +1,5 @@
 paper/__pycache__/
+__pycache__/
 data/
 res/
 .vscode/

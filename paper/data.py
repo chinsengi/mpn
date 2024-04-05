@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import torch
-
+import int_data as syn #synthetic data
 from torch.utils.data import TensorDataset
 
                
@@ -239,3 +239,101 @@ def data_to_tensor(data, y_dtype=torch.float, device='cpu'):
                    torch.as_tensor(y, dtype=y_dtype, device=device))
     
     
+from torch.utils.data import TensorDataset
+
+def convert_serialized_mnist(dataset, smnist_params, out_size, auto_balance=False, verbose=True, raw_data=False, device='cpu'):
+    """
+    Prunes classes in MNIST and converts into serialized data
+    """
+
+    MNIST_DIM = 28 # Number of pixels of an MNIST image
+    
+    mnist_classes = smnist_params['smnist_classes']
+    n_classes = len(mnist_classes)
+    n_seq = smnist_params['phrase_length'] # Used only for input data, not labels or mask
+    if smnist_params['include_eos']:
+        n_seq = n_seq - 1
+    n_smnist_input = int((MNIST_DIM*MNIST_DIM)/n_seq)
+    
+    n_inputs = smnist_params['input_size']
+
+    batch_size = 64 # Just used internally, doesn't really matter what size this is
+
+    ### Prunes classes that are not in 'mnist_classes'
+    prune_bools = np.zeros((n_classes, len(dataset.targets)))
+    for digit_idx in range(len(mnist_classes)):
+        prune_bools[digit_idx] = dataset.targets==mnist_classes[digit_idx]
+
+    idx = []
+    for mnist_idx in range(len(dataset.targets)):
+        if prune_bools[:, mnist_idx].any(): idx.append(mnist_idx)
+
+    data_subset = torch.utils.data.Subset(dataset, idx)
+    pruned_dataset = torch.utils.data.DataLoader(data_subset, batch_size=64, shuffle=True)
+
+    # Converts dataset into the type that can be used by our code 
+    # There are probably better ways to do this but this is just adapting old code...
+      
+    images_np = [] # list where elements are: batch_index x n_seq x n_smnist_input, concatanated later
+    labels_np = [] # elements are batch_index x n_seq x label
+
+    counter = 0
+    for train_vals, idx in zip(pruned_dataset, range(len(pruned_dataset))):
+        images, labels = train_vals[0], train_vals[1]
+        squeezed_images = np.squeeze(images.numpy())
+        
+        batch_images_squeezed = np.squeeze(images.numpy())
+        batch_size = squeezed_images.shape[0]
+
+        if smnist_params['data_type'] == 'smnist_rows':
+            images_np.append(batch_images_squeezed.reshape(batch_size, n_seq, n_smnist_input))
+        elif smnist_params['data_type'] == 'smnist_columns':
+            batch_images_columns = np.swapaxes(batch_images_squeezed, 1, 2)
+            images_np.append(batch_images_columns.reshape(batch_size, n_seq, n_smnist_input))
+        # Note this uses 'phrase_length' so correct size with or without eos
+        labels_batch = np.zeros((squeezed_images.shape[0], smnist_params['phrase_length'], 1), dtype=np.int32)
+        for label, batch_idx in zip(labels, range(len(labels))):
+            labels_batch[batch_idx, -1, 0] = mnist_classes.index(label)
+        labels_np.append(labels_batch)            
+    
+    # Concatanates over batch dimension
+    images_np = np.concatenate(images_np, axis=0)
+    labels_np = np.concatenate(labels_np, axis=0)
+
+    # Now converts to full n_input size via usual word mapping
+    if 'words'not in smnist_params: # should only be called on first pass
+        smnist_params['words'] = ['{}'.format(idx) for idx in range(MNIST_DIM)]
+        if smnist_params['include_eos']:
+            smnist_params['words'].append('<eos>')
+        smnist_params['word_to_input_vector'] = syn.generateInputVectors(smnist_params)
+        smnist_params['input_norm'] = np.mean(np.sum(images_np, axis=-1))
+        print('Average input sum: {:.2f}'.format(smnist_params['input_norm']))
+
+    # Normalized inputs so expected input sum is 1
+    images_np = images_np / smnist_params['input_norm']
+
+    input_matrix = np.zeros((MNIST_DIM, n_inputs))
+    for idx in range(MNIST_DIM):
+        input_matrix[idx] = smnist_params['word_to_input_vector']['{}'.format(idx)]
+
+    inputs = np.matmul(images_np, input_matrix)
+    if smnist_params['include_eos']:
+        eos_inputs = np.zeros((inputs.shape[0], 1, n_inputs))
+        eos_inputs[:, 0] = smnist_params['word_to_input_vector']['<eos>']
+
+        inputs = np.concatenate((inputs, eos_inputs), axis=1)
+
+
+    masks_np = np.zeros((images_np.shape[0], smnist_params['phrase_length'], n_classes), dtype=np.int32)
+    masks_np[:, -1, :] = np.ones((images_np.shape[0], n_classes))
+
+    inputs_torch = torch.tensor(inputs, dtype=torch.float, device=device)
+    labels_torch = torch.tensor(labels_np, dtype=torch.long, device=device)
+    masks_torch = torch.tensor(masks_np, dtype=torch.bool, device=device)
+
+    data = TensorDataset(inputs_torch, labels_torch)
+
+    if raw_data:
+        return data, masks_torch, None, smnist_params
+    else:
+        return data, masks_torch, smnist_params
