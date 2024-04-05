@@ -151,6 +151,7 @@ class NetworkBase(nn.Module):
     def evaluate(self, batch): #TODO: figure out nice way to infer shape of y and don't pass in
         """batch is (X,Y) tuple of Tensors, with X.shape=[T,B,N] or [T,N], Y.shape=[T,1]"""
         #TODO: automatically call batched (if it exists) or per-sample version of forward()
+        print("wut")
         out = torch.empty_like(batch[1]) #shape=[T,B,Ny] if minibatched, otherwise [T,Ny] 
         for t,x in enumerate(batch[0]): #shape=[T,B,Nx] or [T,Nx]
             out[t] = self(x) #shape=[B,Nx] or [Nx]
@@ -399,6 +400,7 @@ class StatefulBase(NetworkBase):
 #        with StatePreserver(preserveState, self.STATEVARS.clone.detach()):
 #            <eval code>                
         self.reset_state()
+        print(batch[0].shape)
         out = super(StatefulBase,self).evaluate(batch)
         return out
 
@@ -435,6 +437,7 @@ def train_dataset(net, trainData, validBatch=None, epochs=100, batchSize=1, vali
     if net.newThresh:
         # _monitor_init called with just the zeroth batch index 
         trainOutputMaskBatch = trainOutputMask[0:batchSize, :, :] if trainOutputMask is not None else None 
+        print(trainData.tensors[0].shape)
         net._monitor_init(trainData[0:batchSize,:,:], validBatch=validBatch, trainOutputMaskBatch=trainOutputMaskBatch, validOutputMask=validOutputMask)
     while net.hist['epoch'] < epochs:
         net.hist['epoch'] += 1

@@ -375,7 +375,7 @@ class HebbNet(StatefulBase):
         # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
         
         # print('A', self.A.shape)
-        # print('x', x.shape)
+        print('x', x.shape)
         # print('b1', self.b1.shape)
         # print('w1', self.w1.shape)
 
@@ -508,7 +508,7 @@ class HebbNet(StatefulBase):
         if 'eta' not in self.hist: # Adds additional quantities specific to MPN to history tracking
             self.hist['eta'] = []
             self.hist['lam'] = []
-
+        print(trainBatch[0].shape)
         super(HebbNet, self)._monitor_init(trainBatch, validBatch, trainOutputMaskBatch=trainOutputMaskBatch, 
                                            validOutputMask=validOutputMask)
 

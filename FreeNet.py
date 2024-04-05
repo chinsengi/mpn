@@ -47,6 +47,8 @@ class FreeLayer(nn.Module):
             init_string += '\n  MP Type: Additive //'
         elif self.mpType == 'mult':
             init_string += '\n  MP Type: Multiplicative //'
+        elif self.mpType == 'free':
+            init_string += '\n  MP Type: Free //'
         else:
             raise ValueError('mpnType not recognized')
 
@@ -200,7 +202,7 @@ class FreeLayer(nn.Module):
             eta = b_eta[0]
             eta = eta[np.newaxis, :, np.newaxis] # makes (1, Ny, 1)   
         elif self.etaType == 'matrix':
-            w_eta, _ = random_weight_init([self.n_inputs, self.n_outputs], bias=True)
+            w_eta, _ = random_weight_init([self.n_inputs, self.n_outputs], bias=False)
             eta = w_eta[0]
             eta = eta[np.newaxis, :, :] # makes (1, Ny, Nx)  
 
@@ -281,9 +283,8 @@ class FreeLayer(nn.Module):
                 raise NotImplementedError('Broke this functionality to get around something earlier.')
                 M = self.lam*self.M
             elif self.updateType == 'hebb': # normal hebbian update
-                if self.MAct is None:
-                    M = self.lam*self.M + self.eta*torch.bmm(post, pre.unsqueeze(1))
-                elif self.MAct == 'tanh':
+                M = self.lam*self.M + self.eta*torch.bmm(post, pre.unsqueeze(1))
+                if self.MAct == 'tanh':
                     M = torch.tanh(self.lam*self.M + self.eta*torch.bmm(post, pre.unsqueeze(1))) # [B, Ny, 1] x [B, 1, Nx] = [B, Ny, Nx]
             elif self.updateType == 'hebb_norm': # normal hebbian update
                 M_tilde = self.lam*self.M + self.eta*torch.bmm(post, pre.unsqueeze(1)) # Normalizes over input dimension 
@@ -311,10 +312,10 @@ class FreeLayer(nn.Module):
                 
         # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
         
-        # print('M', self.M.shape)
-        # print('x', x.shape)
-        # print('b1', self.b1.shape)
-        # print('w1', self.w1.shape)
+        print('M', self.M.shape)
+        print('x', x.shape)
+        print('b1', self.b1.shape)
+        print('w1', self.w1.shape)
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
@@ -329,6 +330,11 @@ class FreeLayer(nn.Module):
             elif self.mpType == 'mult':
                 y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.w1*(
                         self.M + torch.ones_like(self.M)), x.unsqueeze(2))
+            elif self.mpType == 'free':
+                breakpoint()
+                y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
+            else:
+                raise NotImplementedError
                 # y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.w1*self.M, x.unsqueeze(2))
         else: # Applies masking of weights to sparsify network
             if self.mpType == 'add':
@@ -336,6 +342,8 @@ class FreeLayer(nn.Module):
             elif self.mpType == 'mult':
                 y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.w1Mask*self.w1*(
                         self.M + torch.ones_like(self.M)), x.unsqueeze(2))
+            else:
+                raise NotImplementedError
 
         # Adds noise to the preactivations
         if self.noiseType in ('layer',):
@@ -466,3 +474,35 @@ class FreeNet(StatefulBase):
         else:
             return y   
      
+    @torch.no_grad()
+    def _monitor_init(self, trainBatch, validBatch=None, trainOutputMaskBatch=None, validOutputMask=None):
+        if self.hist is None: # Initialize self.hist if needed
+            self.hist = {}
+        if 'eta' not in self.hist: # Adds additional quantities specific to MPN to history tracking
+            self.hist['eta'] = []
+            self.hist['lam'] = []
+
+        super()._monitor_init(trainBatch, validBatch, trainOutputMaskBatch=trainOutputMaskBatch, 
+                                           validOutputMask=validOutputMask)
+
+    @torch.no_grad()
+    def _monitor(self, trainBatch, validBatch=None, out=None, loss=None, acc=None, trainOutputMaskBatch=None, validOutputMask=None, runValid=False):
+        super()._monitor(trainBatch, validBatch, out=out, loss=loss, acc=acc, 
+                                      trainOutputMaskBatch=trainOutputMaskBatch, validOutputMask=validOutputMask, runValid=runValid)
+                                         
+        if self.hist['iter']%self.mointorFreq == 0 or runValid: 
+            self.hist['eta'].append(self.mp_layer._eta.data.cpu().numpy())
+            self.hist['lam'].append(self.mp_layer._lam.data.cpu().numpy()) 
+            
+            if hasattr(self, 'writer'):    
+                self.writer.add_scalar('params/lambda', self.mp_layer.lam, self.hist['iter'])
+                self.writer.add_scalar('params/eta',    self.mp_layer.eta, self.hist['iter'])       
+
+                if self.w2.numel()==1:
+                    self.writer.add_scalar('params/w2', self.w2.item(), self.hist['iter'])
+                if self.b1.numel()==1:
+                    self.writer.add_scalar('params/b1', self.mp_layer.b1.item(), self.hist['iter'])
+                if self.b2.numel()==1:
+                    self.writer.add_scalar('params/b2', self.b2.item(), self.hist['iter'])
+                if self.g1 is not None:
+                    self.writer.add_scalar('params/g1', self.g1.item(), self.hist['iter'])

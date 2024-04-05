@@ -54,6 +54,7 @@ def train_network_ngym(net_params, dataset_params, current_net=None, save=False,
                     dataset_params, set_size=net_params['train_set_size'], device=device
                 )
 
+                breakpoint()
                 early_stop = net.fit('sequence', epochs=net_params['epochs'], 
                                     trainData=trainData, batchSize=net_params['batch_size'],
                                     validBatch=validData[:,:,:], learningRate=1e-3,
@@ -132,7 +133,7 @@ def main():
     save_root = './saved_nets/'
 
     net_params = {
-        'netType': 'FreeNet', # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
+        'netType': 'HebbNet', # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
         'n_inputs': ob_size,           # input dim
         'n_hidden': 100,                                # hidden dim
         'n_outputs': act_size,         # output dim
@@ -142,12 +143,15 @@ def main():
         
         # STPN Features
         'A_act': None,            # Activation on the A update (tanh or None)
+        'lam_type': 'matrix',
         'lam_clamp': 0.95,          # Maximum lambda value
-        'eta_type': 'scalar',       # scalar or vector
+        'eta_type': 'matrix',       # scalar or vector
         'eta_force': None,        # ensure either Hebbian or anti-Hebbian plasticity
         'hebb_type': 'inputOutput',      # input, output, inputOutput
         'modulation_bounds': False, # bound modulations 
         'mod_bound_val': 0.1, 
+        "trainable_state0": True, # Train the initial weights
+        'mp_type': 'free',
 
         # Train parameters
         'train_mode': 'seq_inf',   # 'seq' or 'seq_inf'

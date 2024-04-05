@@ -156,6 +156,7 @@ class NetworkBase(nn.Module):
     def evaluate(self, batch): #TODO: figure out nice way to infer shape of y and don't pass in
         """batch is (X,Y) tuple of Tensors, with X.shape=[T,B,N] or [T,N], Y.shape=[T,1]"""
         #TODO: automatically call batched (if it exists) or per-sample version of forward()
+        print(batch[0].shape)
         out = torch.empty_like(batch[1]) #shape=[T,B,Ny] if minibatched, otherwise [T,Ny] 
         for t,x in enumerate(batch[0]): #shape=[T,B,Nx] or [T,Nx]
             out[t] = self(x) #shape=[B,Nx] or [Nx]
@@ -421,6 +422,7 @@ class StatefulBase(NetworkBase):
 #        with StatePreserver(preserveState, self.STATEVARS.clone.detach()):
 #            <eval code>                
         self.reset_state()
+        print("wut")
         out = super(StatefulBase,self).evaluate(batch)
         return out
 

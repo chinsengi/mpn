@@ -64,7 +64,7 @@ def init_net(net_params, verbose=True):
         net = netClass([net_params['n_inputs'], net_params['n_hidden'], net_params['n_outputs']],
                        trainableState0=net_params['trainable_state0'], stpType=stpType, 
                        hiddenBias=net_params['hidden_bias'], roBias=net_params['ro_bias'], updateType='hebb', 
-                       lamClamp=net_params['lam_clamp'], hebbType=net_params['hebb_type'],
+                       lamClamp=net_params['lam_clamp'], lamType=net_params['lam_type'], hebbType=net_params['hebb_type'], mpType=net_params['mp_type'],
                        etaType=net_params['eta_type'], freezeInputs=net_params['freeze_inputs'], 
                        sparsification=net_params['sparsification'], noiseType=net_params['noise_type'],
                        noiseScale=net_params['noise_scale'], AAct=net_params['A_act'], 

@@ -61,7 +61,7 @@ class HebbNet(StatefulBase):
             self.fOut = None # No activiation function for output
         else:
             raise ValueError('f0 activaiton not recognized')
-        init_string += '\n  Structure: f: {} // fOut: {} // (Nx, Nh, Ny) = ({}, {}, {})'.format(
+        init_string += '\n  Structure: f: {} // fOut: {} // (Nx, Nh, Nyf) = ({}, {}, {})'.format(
             self.fAct, self.fOutAct, self.n_inputs, self.n_hidden, self.n_outputs)
 
         # Determines whether or not input layer is a trainable parameter
@@ -322,11 +322,11 @@ class HebbNet(StatefulBase):
         """
                 
         # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
-        
-        # print('A', self.A.shape)
-        # print('x', x.shape)
-        # print('b1', self.b1.shape)
-        # print('w1', self.w1.shape)
+        # breakpoint()
+        print('A', self.A.shape)
+        print('x', x.shape)
+        print('b1', self.b1.shape)
+        print('w1', self.w1.shape)
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
