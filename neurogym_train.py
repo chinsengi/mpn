@@ -175,6 +175,86 @@ def main():
     if dataset_params['convert_inputs']:
         net_params['n_inputs'] = dataset_params['input_dim']
 
+    if train:
+        dataset_params = datasets_params[0]
+        _, net_params = train_network_ngym(net_params, dataset_params, save=save, save_root=save_root)
+    else:
+        print('Not training (set train=True if you want to train).')
+
+    # Evaluate!
+    load_root_start = './saved_nets/ngym_'
+
+    # n_trials = 5 # For main text figure
+    n_trials = 10 # For eta > 0 and eta < 0 figure
+
+    load_types = [
+        'convert10_2factor2_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
+        'convert10_1factorsmall_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len',
+        # 'convert10_1factor_GRU[10,100,{}]_train=seq_inf_task={}_{}len',
+        # 'convert10_1factor_VanillaRNN[10,100,{}]_train=seq_inf_task={}_{}len',
+    ]
+
+    init_seed = 1000
+    test_set_size = 250
+
+    accs = np.zeros((len(load_types), len(tasks), n_trials,))
+    accs_pos_eta = [[[] for _ in range(len(tasks))] for _ in range(len(load_types))]
+    accs_neg_eta = [[[] for _ in range(len(tasks))] for _ in range(len(load_types))]
+
+    for task_idx, task in enumerate(tasks):
+
+        # Uses the dataset_params array created above just to specify loading name
+        dataset_params = datasets_params[task_idx]
+        print('Task {}: {}'.format(task_idx, dataset_params['dataset_name']))
+        
+        # Have to recreate the dataset in dataset_params_load since its not saved
+        kwargs = {'dt': dataset_params['dt']}
+        dataset = ngym.Dataset(
+            dataset_params['dataset_name'], env_kwargs=kwargs, 
+            batch_size=16, seq_len=dataset_params['seq_length'])
+
+        env = dataset.env
+        ob_size = env.observation_space.shape[0]
+        act_size = env.action_space.n
+
+        for load_idx, load_type in enumerate(load_types):
+            
+            for trial_idx in range(n_trials):
+                load_path = load_root_start + load_type.format(
+                    act_size, dataset_params['dataset_name'], dataset_params['seq_length']
+                )
+
+                net_load, net_params_load, dataset_params_load = load_net(load_path, init_seed+trial_idx)
+                # Have to recreate the dataset in dataset_params_load since its not saved
+                kwargs = {'dt': dataset_params_load['dt']}
+                dataset_params_load['dataset'] = ngym.Dataset(
+                    dataset_params_load['dataset_name'], env_kwargs=kwargs, 
+                    batch_size=16, seq_len=dataset_params_load['seq_length'])
+
+                if 'convert_inputs' not in dataset_params_load:
+                    dataset_params_load['convert_inputs'] = False
+
+                testData, testOutputMask, _ = convert_ngym_dataset(
+                    dataset_params_load, set_size=net_params_load['valid_set_size'], device=torch.device('cpu')
+                )
+                
+                db_load = net_load.evaluate_debug(testData[:,:,:], batchMask=testOutputMask)
+                accs[load_idx, task_idx, trial_idx] = db_load['acc']
+
+                # Special eta signed accuracies
+                if load_idx in (0, 1,): # MPN or MPNpre
+                    eta = net_load.eta.detach().cpu().numpy()[0, 0, 0]
+                    if eta > 0:
+                        accs_pos_eta[load_idx][task_idx].append(db_load['acc'])
+                    else:
+                        accs_neg_eta[load_idx][task_idx].append(db_load['acc'])
+            
+            print('  Acc: {:.3f}'.format(np.mean(accs[load_idx, task_idx, :], axis=-1)))
+            if load_idx in (0, 1,):
+                print('    Pos eta: {}, Neg eta: {}'.format(
+                    len(accs_pos_eta[load_idx][task_idx]), len(accs_neg_eta[load_idx][task_idx]))
+                )
+
 
 if __name__ == "__main__":
     main()

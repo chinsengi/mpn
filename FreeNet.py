@@ -120,6 +120,8 @@ class FreeLayer(nn.Module):
             init_string += 'Pre-Syn Only // '
         elif self.hebbType == 'output':
             init_string += 'Post-Syn Only // '
+        elif self.hebbType == 'inputOutput':
+            init_string += 'Pre-Post // '
         elif self.hebbType != 'inputOutput':
             raise ValueError('hebbType: {} not recognized'.format(self.hebbType))
 
@@ -166,7 +168,7 @@ class FreeLayer(nn.Module):
         # Register_buffer                     
         self.register_buffer('M', None) 
         try:          
-            self.reset_state() # Sets Hebbian weights to zeros
+            self.reset_state() # Sets Hebbian weights to initial values (M0)
         except AttributeError as e:
             print('Warning: {}. Not running reset_state() in mpnNet.__init__'.format(e))
         

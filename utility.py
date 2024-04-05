@@ -312,6 +312,7 @@ def convert_ngym_dataset(dataset_params, set_size=None, device='cpu'):
         inputs = np.matmul(inputs, dataset_params['convert_mat'].T) + dataset_params['convert_b']
     
     # Mask is always just all time steps, so creates all True array
+    act_size = dataset_params["dataset"].env.action_space.n
     masks = np.ones((inputs.shape[0], inputs.shape[1], act_size))
 
     inputs = torch.from_numpy(inputs).type(torch.float).to(device) # inputs.shape (16, 100, 3)
