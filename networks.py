@@ -1069,7 +1069,7 @@ class MultiPlasticNetTwo(StatefulBase):
 
         self.fOutAct = mpnArgs.pop('fOutAct', 'linear') # output activiation   
         if self.fOutAct == 'linear':
-            self.fOut = None # No activiation function for output
+            self.fOut = None # No activation function for output
         else:
             raise ValueError('f0 activaiton not recognized')
         
