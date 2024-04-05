@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 import scipy.special as sps
 
-from net_utils import StatefulBase, check_dims, random_weight_init, binary_classifier_accuracy, xe_classifier_accuracy
+from net_utils import StatefulBase, random_weight_init, xe_classifier_accuracy, random_weight_init_torch
 
 class FreeLayer(nn.Module):  
     """
@@ -19,6 +19,8 @@ class FreeLayer(nn.Module):
         if all([type(x)==int for x in init]) and len(init) == 2:
             Nx, Ny = init
             W, b = random_weight_init([Nx,Ny], bias=True)
+            # self.layerBias = mpnArgs.get('layerBias', True)
+            # self.seq_module = random_weight_init_torch([Nx,Ny], bias=self.layerBias)
             
             self.n_inputs = Nx
             self.n_outputs = Ny 
@@ -79,7 +81,7 @@ class FreeLayer(nn.Module):
             self.b1 = nn.Parameter(torch.tensor(b[0], dtype=torch.float))
         elif self.layerBias and self.freezeLayer:
             init_string += 'Layer bias: frozen // '
-            self.b1 = nn.Parameter(torch.tensor(b[0], dtype=torch.float))
+            self.register_buffer('b1', torch.tensor(b[0], dtype=torch.float))
         else: # No hidden bias
             init_string += 'No layer bias // '
             self.register_buffer('b1', torch.zeros_like(torch.tensor(b[0], dtype=torch.float)))

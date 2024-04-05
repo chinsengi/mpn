@@ -660,6 +660,15 @@ def random_weight_init(dims, bias=False):
     check_dims(W,B) #sanity check
     return W,B
  
+def random_weight_init_torch(dims, bias=False):
+    modules = []
+    for l in range(len(dims)-1):
+        module = nn.Linear(in_features=dims[l], out_features=dims[l+1], bias=bias)
+        nn.init.xavier_uniform_(module.weight)
+        if bias:        
+            nn.init.xavier_uniform_(module.bias)
+        modules.append(module)
+    return nn.Sequential(*modules)
      
 class Autosave():
     def __init__(self, net, filename, saveInterval=3600):
