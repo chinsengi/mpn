@@ -11,3 +11,4 @@ run/
 *.slurm
 image/
 neurogym/
+saved_nets/

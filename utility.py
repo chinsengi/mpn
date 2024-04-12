@@ -10,6 +10,7 @@ import int_data as syn
 import context_data as context
 from net_utils import random_weight_init
 from FreeNet import FreeNet
+import neurogym as ngym
 
 
 def default_params(net_params):
@@ -69,8 +70,8 @@ def init_net(net_params, verbose=True):
                        sparsification=net_params['sparsification'], noiseType=net_params['noise_type'],
                        noiseScale=net_params['noise_scale'], AAct=net_params['A_act'], 
                        modulation_bounds=net_params['modulation_bounds'], mod_bound_val=net_params['mod_bound_val'],
-                       fAct=net_params['f_act'], fOutAct=net_params['f0_act'], verbose=verbose)
-
+                       fAct=net_params['f_act'], fOutAct=net_params['f0_act'], verbose=verbose, batch_size=net_params['batch_size'])
+        
         if net_params['eta_force'] == 'Hebb':
             net.forceHebb = torch.tensor(True)
             net.init_hebb(eta=net.eta.item(), lam=net.lam.item()) #need to re-init for this to work
@@ -105,8 +106,8 @@ def save_net(net, net_params, dataset_details, root_path, overwrite=False, verbo
             dataset_details['phrase_length'], net_params['seed'],
         )
     elif 'dataset' in dataset_details: # neruoGym case
-        dataset_details = copy.deepcopy(dataset_details)
         del dataset_details['dataset'] # Sometimes cant pickle this, so just remove the dataset
+        dataset_details = copy.deepcopy(dataset_details)
         filename = root_path + '{}[{},{},{}]_train={}_task={}_{}len_seed{}.pkl'.format(
             net_params['netType'], net_params['n_inputs'], net_params['n_hidden'],
             net_params['n_outputs'], net_params['train_mode'],
@@ -123,9 +124,9 @@ def save_net(net, net_params, dataset_details, root_path, overwrite=False, verbo
     if os.path.exists(filename):
         print('  File already exists at:', filename)
         override = input('Override? (Y/N):')
-        if override == 'N':
+        if override.upper() == 'N':
             save_file = False
-        elif override != 'Y':
+        elif override.upper() != 'Y':
             raise ValueError(f'Input {override} not recognized!')
 
     # if not overwrite:
@@ -296,10 +297,8 @@ def convert_ngym_dataset(dataset_params, set_size=None, device='cpu'):
     them into a TensorDataset. Also creates a mask of all trues.
     """
 
-    dataset = dataset_params['dataset']
-
-    if set_size is not None:
-        dataset.batchsize = set_size # Just create as a single large batch for now
+    dataset = ngym.Dataset(dataset_params['dataset_name'], env_kwargs={'dt':dataset_params['dt']}, batch_size=set_size,
+                            seq_len=dataset_params['seq_length'])
 
     inputs, labels = dataset()
 

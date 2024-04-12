@@ -170,7 +170,7 @@ class FreeLayer(nn.Module):
         # Register_buffer                     
         self.register_buffer('M', None) 
         try:          
-            self.reset_state() # Sets Hebbian weights to initial values (M0)
+            self.reset_state(mpnArgs.get('batch_size', 1)) # Sets Hebbian weights to initial values (M0)
         except AttributeError as e:
             print('Warning: {}. Not running reset_state() in mpnNet.__init__'.format(e))
         
@@ -182,7 +182,6 @@ class FreeLayer(nn.Module):
         self.init_sm_matrix()
 
     def reset_state(self, batchSize=1):
-
         self.M = torch.ones(batchSize, *self.w1.shape, device=self.w1.device) #shape=[B,Ny,Nx]   
         self.M = self.M * self.M0.unsqueeze(0) # (B, Ny, Nx) x (1, Ny, Nx)
 
@@ -217,7 +216,7 @@ class FreeLayer(nn.Module):
             lam = np.random.uniform(low=0.0, high=self.lamClamp, size=(self.n_outputs,))
             lam = lam[np.newaxis, :, np.newaxis] # makes (1, Ny, 1)   
         elif self.lamType == 'matrix':
-            lam = np.random.uniform(low=0.0, high=self.lamClamp, size=(self.n_inputs, self.n_outputs,))
+            lam = np.random.uniform(low=0.0, high=self.lamClamp, size=(self.n_outputs, self.n_inputs,))
             lam = lam[np.newaxis, :, :] # makes (1, Ny, Nx) 
             
         #Hebbian learning rate 
@@ -312,10 +311,10 @@ class FreeLayer(nn.Module):
                 
         # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
         
-        print('M', self.M.shape)
-        print('x', x.shape)
-        print('b1', self.b1.shape)
-        print('w1', self.w1.shape)
+        # print('M', self.M.shape)
+        # print('x', x.shape)
+        # print('b1', self.b1.shape)
+        # print('w1', self.w1.shape)
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
@@ -331,7 +330,6 @@ class FreeLayer(nn.Module):
                 y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.w1*(
                         self.M + torch.ones_like(self.M)), x.unsqueeze(2))
             elif self.mpType == 'free':
-                breakpoint()
                 y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
             else:
                 raise NotImplementedError
@@ -382,7 +380,8 @@ class FreeNet(StatefulBase):
 
         # Creates the input MP layer
         self.mp_layer = FreeLayer((self.n_inputs, self.n_hidden), verbose=verbose, **mpnArgs)
-
+        self.eta = self.mp_layer.eta
+        
         init_string = 'Network parameters:'
 
         self.fOutAct = mpnArgs.pop('fOutAct', 'linear') # output activiation   
@@ -466,11 +465,12 @@ class FreeNet(StatefulBase):
         # print('w2', self.w2.shape)
 
         # (1, Ny) + [(B, Nh,) x (Nh, Ny) = (B, Ny)] = (B, Ny)
+        h = h.squeeze(dim=2)
         y_tilde = self.readout(h) #output layer activation
         y = self.fOut(y_tilde) if self.fOut is not None else y_tilde  
                            
         if debug: # Make a1 and h size [B, Nh]
-            return h_tilde.squeeze(dim=2), h.squeeze(dim=2), y_tilde, y, M 
+            return h_tilde.squeeze(2), h, y_tilde, y, M 
         else:
             return y   
      
@@ -506,3 +506,64 @@ class FreeNet(StatefulBase):
                     self.writer.add_scalar('params/b2', self.b2.item(), self.hist['iter'])
                 if self.g1 is not None:
                     self.writer.add_scalar('params/g1', self.g1.item(), self.hist['iter'])
+
+    def evaluate(self, batch):
+            """
+            Runs a full sequence of the given back size through the network.
+            """
+            self.reset_state(batchSize=batch[0].shape[0])
+            # Output size can differ from batch[1] size because XE loss is now used 
+            out_size = torch.Size([batch[1].shape[0], batch[1].shape[1], self.n_outputs]) # [B, T, Ny]
+
+            # print('out_size', out_size)
+            out = torch.empty(out_size, dtype=torch.float, layout=batch[1].layout, device=batch[1].device)
+            # out = torch.empty_like(batch[1]) 
+            for time_idx in range(batch[0].shape[1]):
+
+                x = batch[0][:, time_idx, :] # [B, Nx]
+                y = batch[1][:, time_idx, :] # [B, Ny]
+                # print('x shape', x.shape) 
+                # print('y shape', y.shape)
+                out[:, time_idx] = self(x)
+                # print('out[t] shape', out[t].shape)
+            return out
+    
+    @torch.no_grad()    
+    def evaluate_debug(self, batch, batchMask=None, acc=True, reset=True):
+        """ 
+        Runs a full sequence of the given back size through the network, but now keeps track of all sorts of parameters
+        """
+        B = batch[0].shape[0]
+
+        if reset:
+            self.reset_state(batchSize=B)
+
+        Nx = self.n_inputs
+        Nh = self.n_hidden
+        Ny = self.n_outputs
+        T = batch[1].shape[1]
+        db = {'x' : torch.empty(B,T,Nx),
+              'h_tilde' : torch.empty(B,T,Nh),
+              'h' : torch.empty(B,T,Nh),
+              'Wxb' : torch.empty(B,T,Nh),
+              'M': torch.empty(B,T,Nh,Nx),
+              'Mx' : torch.empty(B,T,Nh),
+              'y_tilde' : torch.empty(B,T,Ny),
+              'out' : torch.empty(B,T,Ny),
+              }
+        for time_idx in range(batch[0].shape[1]):
+            x = batch[0][:, time_idx, :] # [B, Nx]
+            y = batch[1][:, time_idx, :]
+
+            db['x'][:,time_idx,:] = x
+            # # Note A for this given time_idx was updated on the previous pass (so A[time_idx=0] will be A0)
+            (db['h_tilde'][:,time_idx,:], db['h'][:,time_idx,:], db['y_tilde'][:,time_idx,:], 
+                db['out'][:,time_idx,:], db['M'][:,time_idx,:]) = self(x, debug=True)      
+            db['Mx'][:,time_idx,:] = torch.bmm(self.mp_layer.M, x.unsqueeze(2)).squeeze(2) 
+
+            db['Wxb'][:,time_idx] = self.mp_layer.b1.unsqueeze(0) + torch.mm(x, torch.transpose(self.mp_layer.w1, 0, 1))
+        
+        if acc:
+            db['acc'] = self.accuracy(batch, out=db['out'].to(self.readout.weight.device), outputMask=batchMask).item()  
+                             
+        return db

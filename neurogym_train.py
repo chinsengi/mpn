@@ -53,12 +53,10 @@ def train_network_ngym(net_params, dataset_params, current_net=None, save=False,
                 trainData, trainOutputMask, dataset_params = convert_ngym_dataset(
                     dataset_params, set_size=net_params['train_set_size'], device=device
                 )
-
-                breakpoint()
                 early_stop = net.fit('sequence', epochs=net_params['epochs'], 
                                     trainData=trainData, batchSize=net_params['batch_size'],
                                     validBatch=validData[:,:,:], learningRate=1e-3,
-                                    newThresh=new_thresh, monitorFreq=50, 
+                                    newThresh=new_thresh, monitorFreq=200, 
                                     trainOutputMask=trainOutputMask, validOutputMask=validOutputMask,
                                     validStopThres=net_params['accEarlyStop'], weightReg=net_params['weight_reg'], 
                                     regLambda=net_params['reg_lambda'], gradientClip=net_params['gradient_clip'],
@@ -77,26 +75,26 @@ def train_network_ngym(net_params, dataset_params, current_net=None, save=False,
 def main():
     # All supervised tasks:
     tasks = (
-        # 'ContextDecisionMaking-v0', 
-        # 'DelayComparison-v0', 
-        # 'DelayMatchCategory-v0',
-        # 'DelayMatchSample-v0',
-        # 'DelayMatchSampleDistractor1D-v0',
-        # 'DelayPairedAssociation-v0',
-        # 'DualDelayMatchSample-v0',
-        # 'GoNogo-v0',
-        # 'HierarchicalReasoning-v0',
-        # 'IntervalDiscrimination-v0',
-        # 'MotorTiming-v0',
-        # 'MultiSensoryIntegration-v0',
-        # 'OneTwoThreeGo-v0',
-        # 'PerceptualDecisionMaking-v0',
-        # 'PerceptualDecisionMakingDelayResponse-v0',
+        'ContextDecisionMaking-v0', 
+        'DelayComparison-v0', 
+        'DelayMatchCategory-v0',
+        'DelayMatchSample-v0',
+        'DelayMatchSampleDistractor1D-v0',
+        'DelayPairedAssociation-v0',
+        'DualDelayMatchSample-v0',
+        'GoNogo-v0',
+        'HierarchicalReasoning-v0',
+        'IntervalDiscrimination-v0',
+        'MotorTiming-v0',
+        'MultiSensoryIntegration-v0',
+        'OneTwoThreeGo-v0',
+        'PerceptualDecisionMaking-v0',
+        'PerceptualDecisionMakingDelayResponse-v0',
         'ProbabilisticReasoning-v0',
-        # 'PulseDecisionMaking-v0',
-        # 'ReachingDelayResponse-v0', # Different input type, so omitted
-        # 'ReadySetGo-v0',
-        # 'SingleContextDecisionMaking-v0',
+        'PulseDecisionMaking-v0',
+        'ReachingDelayResponse-v0', # Different input type, so omitted
+        'ReadySetGo-v0',
+        'SingleContextDecisionMaking-v0',
     )
 
     kwargs = {'dt': 100}
@@ -128,12 +126,14 @@ def main():
 
         datasets_params.append(dataset_params)
 
-    train = True
-    save = True
+    # train = True
+    # save = True
+    train = False
+    save = False
     save_root = './saved_nets/'
 
     net_params = {
-        'netType': 'HebbNet', # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
+        'netType': 'FreeNet', # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
         'n_inputs': ob_size,           # input dim
         'n_hidden': 100,                                # hidden dim
         'n_outputs': act_size,         # output dim
@@ -167,7 +167,7 @@ def main():
         'cuda': True,
         'validEarlyStop': True,     # Early stop when average validation loss saturates
         'accEarlyStop': None,       # Accuracy to stop early at (None to ignore)
-        'minMaxIter': (100, 200), #(2000, 10000),  # Bounds on training time
+        'minMaxIter': (2000, 10000), #(2000, 10000),  # Bounds on training time
         'seed': 1003,               # This seed is used to generate training/valid data too
 
         'train_set_size': 3200,
@@ -185,20 +185,22 @@ def main():
     else:
         print('Not training (set train=True if you want to train).')
 
-    # Evaluate!
-    load_root_start = './saved_nets/ngym_'
+    ############
+    # Evaluate!#
+    ############
+    load_root_start = './saved_nets/'
 
     # n_trials = 5 # For main text figure
-    n_trials = 10 # For eta > 0 and eta < 0 figure
+    n_trials = 1 # For eta > 0 and eta < 0 figure
 
     load_types = [
-        'convert10_2factor2_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
-        'convert10_1factorsmall_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len',
+        'FreeNet[10,100,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
+        # 'convert10_1factorsmall_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factor_GRU[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factor_VanillaRNN[10,100,{}]_train=seq_inf_task={}_{}len',
     ]
 
-    init_seed = 1000
+    init_seed = net_params['seed']
     test_set_size = 250
 
     accs = np.zeros((len(load_types), len(tasks), n_trials,))
@@ -215,7 +217,7 @@ def main():
         kwargs = {'dt': dataset_params['dt']}
         dataset = ngym.Dataset(
             dataset_params['dataset_name'], env_kwargs=kwargs, 
-            batch_size=16, seq_len=dataset_params['seq_length'])
+            batch_size=test_set_size, seq_len=dataset_params['seq_length'])
 
         env = dataset.env
         ob_size = env.observation_space.shape[0]
@@ -224,16 +226,15 @@ def main():
         for load_idx, load_type in enumerate(load_types):
             
             for trial_idx in range(n_trials):
-                load_path = load_root_start + load_type.format(
+                load_path = os.path.join(load_root_start, load_type.format(
                     act_size, dataset_params['dataset_name'], dataset_params['seq_length']
-                )
-
+                ))
                 net_load, net_params_load, dataset_params_load = load_net(load_path, init_seed+trial_idx)
                 # Have to recreate the dataset in dataset_params_load since its not saved
                 kwargs = {'dt': dataset_params_load['dt']}
                 dataset_params_load['dataset'] = ngym.Dataset(
                     dataset_params_load['dataset_name'], env_kwargs=kwargs, 
-                    batch_size=16, seq_len=dataset_params_load['seq_length'])
+                    batch_size=test_set_size, seq_len=dataset_params_load['seq_length'])
 
                 if 'convert_inputs' not in dataset_params_load:
                     dataset_params_load['convert_inputs'] = False

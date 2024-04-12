@@ -153,14 +153,9 @@ class NetworkBase(nn.Module):
             #     return True
         return False  
 
+    @abstractmethod
     def evaluate(self, batch): #TODO: figure out nice way to infer shape of y and don't pass in
-        """batch is (X,Y) tuple of Tensors, with X.shape=[T,B,N] or [T,N], Y.shape=[T,1]"""
-        #TODO: automatically call batched (if it exists) or per-sample version of forward()
-        print(batch[0].shape)
-        out = torch.empty_like(batch[1]) #shape=[T,B,Ny] if minibatched, otherwise [T,Ny] 
-        for t,x in enumerate(batch[0]): #shape=[T,B,Nx] or [T,Nx]
-            out[t] = self(x) #shape=[B,Nx] or [Nx]
-        return out
+        pass
 
     @abstractmethod
     def evaluate_debug(self, batch):
@@ -422,7 +417,6 @@ class StatefulBase(NetworkBase):
 #        with StatePreserver(preserveState, self.STATEVARS.clone.detach()):
 #            <eval code>                
         self.reset_state()
-        print("wut")
         out = super(StatefulBase,self).evaluate(batch)
         return out
 
@@ -450,7 +444,7 @@ class StatefulBase(NetworkBase):
 ### Training ###
 ################
     
-def train_dataset(net, trainData, validBatch=None, epochs=100, batchSize=1, validStopThres=None, earlyStopValid=False, 
+def train_dataset(net: NetworkBase, trainData, validBatch=None, epochs=100, batchSize=1, validStopThres=None, earlyStopValid=False, 
     trainOutputMask=None, validOutputMask=None, minMaxIter=(-2, 1e7)): 
     """trainData is a TensorDataset"""    
     early_stop = False
@@ -467,7 +461,6 @@ def train_dataset(net, trainData, validBatch=None, epochs=100, batchSize=1, vali
                                      trainOutputMask=trainOutputMask, validOutputMask=validOutputMask,
                                      minMaxIter=minMaxIter)  
         if converged:
-            # print('Converged, stopping early.')
             early_stop = True
             break                                      
 

@@ -186,7 +186,7 @@ class HebbNet(StatefulBase):
         self.register_buffer('forceHebb', torch.tensor(False))        # Forces eta to be positive
         self.register_buffer('groundTruthPlast', torch.tensor(False))
         
-        self.init_hebb(**hebbArgs) #parameters of Hebbian rule
+        self.init_hebb() #parameters of Hebbian rule
 
         ####      
         
@@ -322,11 +322,11 @@ class HebbNet(StatefulBase):
         """
                 
         # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
+        # print('A', self.A.shape)
+        # print('x', x.shape)
+        # print('b1', self.b1.shape)
+        # print('w1', self.w1.shape)
         # breakpoint()
-        print('A', self.A.shape)
-        print('x', x.shape)
-        print('b1', self.b1.shape)
-        print('w1', self.w1.shape)
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
