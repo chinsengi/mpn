@@ -75,26 +75,25 @@ def train_network_ngym(net_params, dataset_params, current_net=None, save=False,
 def main():
     # All supervised tasks:
     tasks = (
-        'ContextDecisionMaking-v0', 
-        'DelayComparison-v0', 
-        'DelayMatchCategory-v0',
-        'DelayMatchSample-v0',
-        'DelayMatchSampleDistractor1D-v0',
-        'DelayPairedAssociation-v0',
-        'DualDelayMatchSample-v0',
-        'GoNogo-v0',
+        # 'ContextDecisionMaking-v0', 
+        # 'DelayComparison-v0', 
+        # 'DelayMatchCategory-v0',
+        # 'DelayMatchSample-v0',
+        # 'DelayMatchSampleDistractor1D-v0',
+        # 'DelayPairedAssociation-v0',
+        # 'DualDelayMatchSample-v0',
+        # 'GoNogo-v0',
         'HierarchicalReasoning-v0',
-        'IntervalDiscrimination-v0',
-        'MotorTiming-v0',
-        'MultiSensoryIntegration-v0',
-        'OneTwoThreeGo-v0',
-        'PerceptualDecisionMaking-v0',
-        'PerceptualDecisionMakingDelayResponse-v0',
-        'ProbabilisticReasoning-v0',
-        'PulseDecisionMaking-v0',
-        'ReachingDelayResponse-v0', # Different input type, so omitted
-        'ReadySetGo-v0',
-        'SingleContextDecisionMaking-v0',
+        # 'IntervalDiscrimination-v0',
+        # 'MotorTiming-v0',
+        # 'MultiSensoryIntegration-v0',
+        # 'OneTwoThreeGo-v0',
+        # 'PerceptualDecisionMaking-v0',
+        # 'PerceptualDecisionMakingDelayResponse-v0',
+        # 'ProbabilisticReasoning-v0',
+        # 'PulseDecisionMaking-v0',
+        # 'ReadySetGo-v0',
+        # 'SingleContextDecisionMaking-v0',
     )
 
     kwargs = {'dt': 100}
@@ -126,10 +125,10 @@ def main():
 
         datasets_params.append(dataset_params)
 
-    # train = True
-    # save = True
-    train = False
-    save = False
+    train = True
+    save = True
+    # train = False
+    # save = False
     save_root = './saved_nets/'
 
     net_params = {
