@@ -123,7 +123,8 @@ def save_net(net, net_params, dataset_details, root_path, overwrite=False, verbo
 
     if os.path.exists(filename):
         print('  File already exists at:', filename)
-        override = input('Override? (Y/N):')
+        # override = input('Override? (Y/N):')
+        override = 'Y'
         if override.upper() == 'N':
             save_file = False
         elif override.upper() != 'Y':

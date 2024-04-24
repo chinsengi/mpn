@@ -156,7 +156,7 @@ def main():
     n_trials = 1
     acc_thresh = 0.99
     valid_early_stop = True
-    min_max_iter = (2000, 10000)
+    min_max_iter = (2000, 20000)
     if train:
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
