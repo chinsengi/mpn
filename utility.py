@@ -307,15 +307,6 @@ def convert_ngym_dataset(dataset_params, set_size=None, device='cpu', mask_type=
     inputs = np.transpose(inputs, axes=(1, 0, 2))
     labels = np.transpose(labels, axes=(1, 0,))[:, :, np.newaxis]
 
-    if dataset_params['convert_inputs']:
-        # If the conversion is not already generated, create it
-        if 'convert_mat' not in dataset_params:
-            W,b = random_weight_init([inputs.shape[-1], dataset_params['input_dim']], bias=True)
-            dataset_params['convert_mat'] = W[0]
-            dataset_params['convert_b'] = b[0][np.newaxis, np.newaxis, :]
-
-        inputs = np.matmul(inputs, dataset_params['convert_mat'].T) + dataset_params['convert_b']
-    
     act_size = dataset.env.action_space.n
     if mask_type is None: # Mask is always just all time steps, so creates all True array
         masks = np.ones((inputs.shape[0], inputs.shape[1], act_size))
@@ -330,6 +321,14 @@ def convert_ngym_dataset(dataset_params, set_size=None, device='cpu', mask_type=
     else:
         raise ValueError('mask type {} not recoginized'.format(mask_type))
 
+    if dataset_params['convert_inputs']:
+        # If the conversion is not already generated, create it
+        if 'convert_mat' not in dataset_params:
+            W,b = random_weight_init([inputs.shape[-1], dataset_params['input_dim']], bias=True)
+            dataset_params['convert_mat'] = W[0]
+            dataset_params['convert_b'] = b[0][np.newaxis, np.newaxis, :]
+
+        inputs = np.matmul(inputs, dataset_params['convert_mat'].T) + dataset_params['convert_b']
     inputs = torch.from_numpy(inputs).type(torch.float).to(device) # inputs.shape (16, 100, 3)
     labels = torch.from_numpy(labels).type(torch.long).to(device) # labels.shape = (16, 100, 1)
     masks = torch.tensor(masks, dtype=torch.bool, device=device)
