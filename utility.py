@@ -289,7 +289,7 @@ def HebbNet_word_proj(word, As, net, toy_params):
 
     return h_word.numpy()
 
-def convert_ngym_dataset(dataset_params, set_size=None, device='cpu'):
+def convert_ngym_dataset(dataset_params, set_size=None, device='cpu', mask_type=None):
     """
     This converts a neroGym dataset into one that the code can use. 
 
@@ -315,9 +315,19 @@ def convert_ngym_dataset(dataset_params, set_size=None, device='cpu'):
 
         inputs = np.matmul(inputs, dataset_params['convert_mat'].T) + dataset_params['convert_b']
     
-    # Mask is always just all time steps, so creates all True array
-    act_size = dataset_params["dataset"].env.action_space.n
-    masks = np.ones((inputs.shape[0], inputs.shape[1], act_size))
+    act_size = dataset.env.action_space.n
+    if mask_type is None: # Mask is always just all time steps, so creates all True array
+        masks = np.ones((inputs.shape[0], inputs.shape[1], act_size))
+    elif mask_type == 'label': # Masks on when labels are nonzero
+        masks_flat = (labels > 0.0).astype(np.int32) # (B, seq_len)
+        masks = np.repeat(masks_flat, act_size, axis=-1) # (B, seq_len, act_size)
+    elif mask_type == 'no_fix': # Masks on when fixation is zero, assumes fixation is zeroth input
+        masks_flat = (inputs[:, :, 0:1] == 0.0).astype(np.int32) # (B, seq_len)
+        if np.sum(masks_flat) == 0:
+            raise ValueError('Mask is all zeros!')
+        masks = np.repeat(masks_flat, act_size, axis=-1) # (B, seq_len, act_size)
+    else:
+        raise ValueError('mask type {} not recoginized'.format(mask_type))
 
     inputs = torch.from_numpy(inputs).type(torch.float).to(device) # inputs.shape (16, 100, 3)
     labels = torch.from_numpy(labels).type(torch.long).to(device) # labels.shape = (16, 100, 1)
