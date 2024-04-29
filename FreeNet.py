@@ -30,7 +30,7 @@ class FreeLayer(nn.Module):
         self.verbose = verbose
         init_string = 'MP Layer parameters:'
 
-        self.layerAct = mpnArgs.get('layerAct', 'sigmoid') # layer activation
+        self.layerAct = mpnArgs.get('fAct', 'sigmoid') # layer activation
         if self.layerAct  == 'linear':
             self.f = None
         elif self.layerAct  == 'sigmoid':
@@ -39,6 +39,8 @@ class FreeLayer(nn.Module):
             self.f = torch.tanh
         elif self.layerAct  == 'relu':
             self.f = torch.relu
+        elif self.layerAct == 'softmax':
+            self.f = torch.softmax
         else:
             raise ValueError('f activaiton not recognized')
 
@@ -350,7 +352,12 @@ class FreeLayer(nn.Module):
                 )
             y_tilde = y_tilde + batch_noise 
 
-        y = self.f(y_tilde) if self.f is not None else y_tilde
+        if self.layerAct == 'softmax':
+            y = self.f(y_tilde, -2)
+        elif self.f is not None:
+            y = self.f(y_tilde) 
+        else:
+            y = y_tilde
         
         M = self.update_sm_matrix(x, y, stateOnly=stateOnly) # Returned M is only used if finding fixed points        
         
@@ -394,11 +401,21 @@ class FreeNet(StatefulBase):
         
         # Determines if readout bias is trainable or simply not used (easier interpretting readouts in the latter)
         self.roBias = mpnArgs.pop('roBias', True)
-        readout = nn.Linear(in_features=Nh, out_features=Ny, bias=self.roBias)
-        nn.init.xavier_uniform_(readout.weight)
-        if readout.bias is not None:
-            nn.init.xavier_uniform_(readout.bias)
-        self.readout = readout
+        self.outputLayer = mpnArgs.pop('outputLayer', 'double')
+        if self.outputLayer == 'single':
+            init_string += 'Single output layer // '
+            self.readout = nn.Linear(in_features=Nh, out_features=Ny, bias=self.roBias)
+            xavier_init(self.readout)
+        elif self.outputLayer == 'double':
+            init_string += 'Double output layer // '
+            readout_1 = nn.Linear(in_features=Nh, out_features=Ny*4, bias=self.roBias)
+            readout_2 = nn.Linear(in_features=Ny*4, out_features=Ny, bias=self.roBias)
+            xavier_init(readout_1)
+            xavier_init(readout_2)
+            self.readout = nn.Sequential(readout_1,nn.ReLU(), readout_2)
+        else:
+            raise ValueError('outputLayer not recognized')
+        
 
         # Injects noise into the network
         self.noiseType = mpnArgs.get('noiseType', None)
@@ -442,7 +459,6 @@ class FreeNet(StatefulBase):
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
-
         # Adds noise to the input
         if self.noiseType in ('input',):
             batch_noise = self.noiseScale*torch.normal(
@@ -531,7 +547,7 @@ class FreeNet(StatefulBase):
     @torch.no_grad()    
     def evaluate_debug(self, batch, batchMask=None, acc=True, reset=True):
         """ 
-        Runs a full sequence of the given back size through the network, but now keeps track of all sorts of parameters
+        Runs a full sequence of the given batch size through the network, but now keeps track of all sorts of parameters
         """
         B = batch[0].shape[0]
 
@@ -567,3 +583,8 @@ class FreeNet(StatefulBase):
             db['acc'] = self.accuracy(batch, out=db['out'].to(self.readout.weight.device), outputMask=batchMask).item()  
                              
         return db
+    
+def xavier_init(layer: nn.Linear):
+    nn.init.xavier_uniform_(layer.weight)
+    if layer.bias is not None:
+        nn.init.xavier_uniform_(layer.bias)

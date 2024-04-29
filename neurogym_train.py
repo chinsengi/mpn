@@ -42,7 +42,8 @@ def train_network_ngym(net_params, dataset_params, current_net=None, save=False,
             net_params['epochs'] = 0 if current_net is None else net.hist['epoch']
             
             validData, validOutputMask, dataset_params = convert_ngym_dataset(
-                dataset_params, set_size=net_params['valid_set_size'], device=device, mask_type=tasks_masks[dataset_params['dataset_name']]
+                dataset_params, set_size=net_params['valid_set_size'], device=device,
+                mask_type=tasks_masks[dataset_params['dataset_name']]
             )
             
             early_stop = False
@@ -51,7 +52,8 @@ def train_network_ngym(net_params, dataset_params, current_net=None, save=False,
             while not early_stop:
                 net_params['epochs'] += 10 # Number of times it sees each example
                 trainData, trainOutputMask, dataset_params = convert_ngym_dataset(
-                    dataset_params, set_size=net_params['train_set_size'], device=device, mask_type=tasks_masks[dataset_params['dataset_name']]
+                    dataset_params, set_size=net_params['train_set_size'], device=device, 
+                    mask_type=tasks_masks[dataset_params['dataset_name']]
                 )
                 early_stop = net.fit('sequence', epochs=net_params['epochs'], 
                                     trainData=trainData, batchSize=net_params['batch_size'],
@@ -76,46 +78,46 @@ def main():
     # All supervised tasks:
     tasks = (
         'ContextDecisionMaking-v0', 
-        'DelayComparison-v0', 
-        'DelayMatchCategory-v0',
-        'DelayMatchSample-v0',
-        'DelayMatchSampleDistractor1D-v0',
-        'DelayPairedAssociation-v0',
-        'DualDelayMatchSample-v0',
-        'GoNogo-v0',
-        'HierarchicalReasoning-v0',
-        'IntervalDiscrimination-v0',
-        'MotorTiming-v0',
-        'MultiSensoryIntegration-v0',
-        'OneTwoThreeGo-v0',
-        'PerceptualDecisionMaking-v0',
-        'PerceptualDecisionMakingDelayResponse-v0',
-        'ProbabilisticReasoning-v0',
-        'PulseDecisionMaking-v0',
-        'ReadySetGo-v0',
-        'SingleContextDecisionMaking-v0',
+        # 'DelayComparison-v0', 
+        # 'DelayMatchCategory-v0',
+        # 'DelayMatchSample-v0',
+        # 'DelayMatchSampleDistractor1D-v0',
+        # 'DelayPairedAssociation-v0',
+        # 'DualDelayMatchSample-v0',
+        # 'GoNogo-v0',
+        # 'HierarchicalReasoning-v0',
+        # 'IntervalDiscrimination-v0',
+        # 'MotorTiming-v0',
+        # 'MultiSensoryIntegration-v0',
+        # 'OneTwoThreeGo-v0',
+        # 'PerceptualDecisionMaking-v0',
+        # 'PerceptualDecisionMakingDelayResponse-v0',
+        # 'ProbabilisticReasoning-v0',
+        # 'PulseDecisionMaking-v0',
+        # 'ReadySetGo-v0',
+        # 'SingleContextDecisionMaking-v0',
     )
 
     tasks_masks = {
         'ContextDecisionMaking-v0': 'label', # (no_fix too)
-        'DelayComparison-v0': 'label', # (no_fix too)
-        'DelayMatchCategory-v0': 'label', # (no_fix too)
-        'DelayMatchSample-v0': 'label', # (no_fix too)
-        'DelayMatchSampleDistractor1D-v0': 'no_fix',
-        'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
-        'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
-        'GoNogo-v0': 'no_fix', # (timing task, could improve)
-        'HierarchicalReasoning-v0': None,
-        'IntervalDiscrimination-v0': 'label', # (no_fix too)
-        'MotorTiming-v0': 'no_fix', # (timing task, could improve)
-        'MultiSensoryIntegration-v0': 'label', # (no_fix too)
-        'OneTwoThreeGo-v0': None,
-        'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
-        'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
-        'ProbabilisticReasoning-v0': 'label', # (no_fix too)
-        'PulseDecisionMaking-v0': 'label', # (no_fix too)
-        'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
-        'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
+        # 'DelayComparison-v0': 'label', # (no_fix too)
+        # 'DelayMatchCategory-v0': 'label', # (no_fix too)
+        # 'DelayMatchSample-v0': 'label', # (no_fix too)
+        # 'DelayMatchSampleDistractor1D-v0': 'no_fix',
+        # 'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
+        # 'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
+        # 'GoNogo-v0': 'no_fix', # (timing task, could improve)
+        # 'HierarchicalReasoning-v0': None,
+        # 'IntervalDiscrimination-v0': 'label', # (no_fix too)
+        # 'MotorTiming-v0': 'no_fix', # (timing task, could improve)
+        # 'MultiSensoryIntegration-v0': 'label', # (no_fix too)
+        # 'OneTwoThreeGo-v0': None,
+        # 'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
+        # 'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
+        # 'ProbabilisticReasoning-v0': 'label', # (no_fix too)
+        # 'PulseDecisionMaking-v0': 'label', # (no_fix too)
+        # 'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
+        # 'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
     }
     
     kwargs = {'dt': 100}
@@ -151,12 +153,14 @@ def main():
     save = True
     # train = False
     # save = False
-    save_root = './saved_nets/'
+    save_root = './saved_nets/two_layer_output'
+    # save_root = './saved_nets'
 
     n_trials = 1
     acc_thresh = 0.99
     valid_early_stop = True
     min_max_iter = (2000, 20000)
+    init_seed = 1003
     if train:
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
@@ -173,7 +177,7 @@ def main():
                     'n_inputs': ob_size,           # input dim
                     'n_hidden': 100,                                # hidden dim
                     'n_outputs': act_size,         # output dim
-                    'f_act': 'relu',         # 1st layer actiivation function # linear, sigmoid, tanh, relu
+                    'f_act': 'softmax',         # 1st layer actiivation function # linear, sigmoid, tanh, relu
                     'f0_act': 'linear',          # 2nd layer actiivation function
                     'trainable_state0': False,
                     
@@ -204,7 +208,7 @@ def main():
                     'validEarlyStop': valid_early_stop,     # Early stop when average validation loss saturates
                     'accEarlyStop': acc_thresh,       # Accuracy to stop early at (None to ignore)
                     'minMaxIter': min_max_iter, #(2000, 10000),  # Bounds on training time
-                    'seed': 1003,               # This seed is used to generate training/valid data too
+                    'seed': init_seed,               # This seed is used to generate training/valid data too
 
                     'train_set_size': 3200,
                     'valid_set_size': 250,
@@ -229,20 +233,19 @@ def main():
     ############
     # Evaluate!#
     ############
-    load_root_start = './saved_nets/'
+    load_root_start = save_root
 
     # n_trials = 5 # For main text figure
     n_trials = 1 # For eta > 0 and eta < 0 figure
 
     load_types = [
         'FreeNet[10,100,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
-        'GRU[10,500,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
+        # 'GRU[10,500,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
         # 'convert10_1factorsmall_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factor_GRU[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factor_VanillaRNN[10,100,{}]_train=seq_inf_task={}_{}len',
     ]
 
-    init_seed = net_params['seed']
     test_set_size = 250
 
     accs = np.zeros((len(load_types), len(tasks), n_trials,))

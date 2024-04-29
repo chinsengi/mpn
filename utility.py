@@ -99,21 +99,21 @@ def save_net(net, net_params, dataset_details, root_path, overwrite=False, verbo
     save_file = True
 
     if 'data_type' in dataset_details: # toy_params case
-        filename = root_path + '{}[{},{},{}]_train={}_task={}_{}class_{}len_seed{}.pkl'.format(
+        filename = os.path.join(root_path, '{}[{},{},{}]_train={}_task={}_{}class_{}len_seed{}.pkl'.format(
             net_params['netType'], net_params['n_inputs'], net_params['n_hidden'],
             net_params['n_outputs'], net_params['train_mode'],
             dataset_details['data_type'], dataset_details['n_classes'], 
             dataset_details['phrase_length'], net_params['seed'],
-        )
+        ))
     elif 'dataset' in dataset_details: # neruoGym case
         del dataset_details['dataset'] # Sometimes cant pickle this, so just remove the dataset
         dataset_details = copy.deepcopy(dataset_details)
-        filename = root_path + '{}[{},{},{}]_train={}_task={}_{}len_seed{}.pkl'.format(
+        filename = os.path.join(root_path, '{}[{},{},{}]_train={}_task={}_{}len_seed{}.pkl'.format(
             net_params['netType'], net_params['n_inputs'], net_params['n_hidden'],
             net_params['n_outputs'], net_params['train_mode'],
             dataset_details['dataset_name'], 
             dataset_details['seq_length'], net_params['seed'],
-        )
+        ))
     else:
         raise ValueError('dataset_details not recognized')
 
