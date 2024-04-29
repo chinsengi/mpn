@@ -25,7 +25,7 @@ def default_params(net_params):
     return net_params
 
 
-def init_net(net_params, verbose=True):
+def init_net(net_params, verbose=True, device="cpu"):
 
     # Set defaults
     net_params = default_params(net_params)
@@ -111,6 +111,7 @@ def init_net(net_params, verbose=True):
             verbose=verbose,
             batch_size=net_params["batch_size"],
             outputLayer=net_params["output_layer"],
+            device=device,
         )
 
         if net_params["eta_force"] == "Hebb":
@@ -126,7 +127,7 @@ def init_net(net_params, verbose=True):
     else:
         raise ValueError
 
-    return net
+    return net.to(device)
 
 
 def save_net(
@@ -274,7 +275,7 @@ def get_data_type_fns(toy_params, verbose=True):
     return data_gen_fn, special_data_gen_fn, run_special
 
 
-def load_net(filename, seed):
+def load_net(filename, seed, device="cpu"):
     """
     Loads the net_params and toy_params, and uses this to re-init a network.
 
@@ -295,11 +296,11 @@ def load_net(filename, seed):
             )  # toy_params or dataset_details
 
         # Using loaded net and toy parameters, creates new network
-        net_load = init_net(net_params_load, verbose=False)
+        net_load = init_net(net_params_load, verbose=False, device=device)
 
         with open(state_filename, "rb") as load_file:
             net_load.load(load_file)
-
+        net_load.to(device)
         return net_load, net_params_load, dataset_details_load
 
 
@@ -457,3 +458,11 @@ def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=
     trainData = torch.utils.data.TensorDataset(inputs, labels)
 
     return trainData, masks, dataset_params
+
+def use_gpu(gpu_id: int = 0):
+    num_of_gpus = torch.cuda.device_count()
+    if num_of_gpus > 0:
+        assert gpu_id < num_of_gpus
+    device = f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu"
+    print(f"Using {device} device")
+    return device

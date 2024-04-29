@@ -13,6 +13,7 @@ def train_network_ngym(
     set_seed=True,
     verbose=True,
     tasks_masks=None,
+    device="cpu",
 ):
     """
     Code to train a single network using a neuroGym dataset
@@ -29,14 +30,9 @@ def train_network_ngym(
             torch.manual_seed(net_params["seed"])
 
     # Intitializes network and puts it on device
-    if net_params["cuda"]:
-        if verbose:
-            print("Using CUDA...")
-        device = torch.device("cuda")
-    else:
-        if verbose:
-            print("Using CPU...")
-        device = torch.device("cpu")
+    if verbose:
+        print(f"Using {device}...")
+        
     if current_net is None:  # Creates a new network
         net = init_net(net_params, verbose=verbose)
         # print('w1:', net.w1.detach().numpy()[:2,:2])
@@ -180,8 +176,8 @@ def main():
 
     train = True
     save = True
-    # train = False
-    # save = False
+    train = False
+    save = False
     save_root = "./saved_nets/two_layer_output"
     # save_root = './saved_nets'
 
@@ -190,6 +186,7 @@ def main():
     valid_early_stop = True
     min_max_iter = (2000, 20000)
     init_seed = 1003
+    device = use_gpu()
     if train:
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
@@ -232,7 +229,6 @@ def main():
                     "sparsification": 0.0,  # Amount to sparsify network's weights (0.0 = no sparsification)
                     "noise_type": "input",  # None, 'input', 'hidden'
                     "noise_scale": 0.1,  # Expected magnitude of noise vector
-                    "cuda": True,
                     "validEarlyStop": valid_early_stop,  # Early stop when average validation loss saturates
                     "accEarlyStop": acc_thresh,  # Accuracy to stop early at (None to ignore)
                     "minMaxIter": min_max_iter,  # (2000, 10000),  # Bounds on training time
@@ -259,6 +255,7 @@ def main():
                     save_root=save_root,
                     verbose=verbose,
                     tasks_masks=tasks_masks,
+                    device=device,
                 )
     else:
         print("Not training (set train=True if you want to train).")
@@ -322,8 +319,9 @@ def main():
                     ),
                 )
                 net_load, net_params_load, dataset_params_load = load_net(
-                    load_path, init_seed + trial_idx
+                    load_path, init_seed + trial_idx, device=device
                 )
+                net_load.to(device)
                 # Have to recreate the dataset in dataset_params_load since its not saved
                 kwargs = {"dt": dataset_params_load["dt"]}
                 dataset_params_load["dataset"] = ngym.Dataset(
@@ -339,7 +337,7 @@ def main():
                 testData, testOutputMask, _ = convert_ngym_dataset(
                     dataset_params_load,
                     set_size=net_params_load["valid_set_size"],
-                    device=torch.device("cpu"),
+                    device=device,
                     mask_type=tasks_masks[dataset_params_load["dataset_name"]],
                 )
 

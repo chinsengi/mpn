@@ -513,7 +513,9 @@ class FreeNet(StatefulBase):
             self.verbose
         ):  # Full summary of readout parameters (MP layer prints out internally)
             print(init_string)
-
+            
+        self.device = mpnArgs.get("device", "cuda")
+            
     def load(self, filename):
         super(FreeNet, self).load(filename)
         # self.update_hebb(torch.tensor([0.]),torch.tensor([0.])) # to get self.eta right if forceHebb/forceAnti used
@@ -724,7 +726,7 @@ class FreeNet(StatefulBase):
         if acc:
             db["acc"] = self.accuracy(
                 batch,
-                out=db["out"].to(self.readout.weight.device),
+                out=db["out"].to(self.device),
                 outputMask=batchMask,
             ).item()
 
