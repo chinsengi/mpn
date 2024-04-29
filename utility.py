@@ -110,6 +110,7 @@ def init_net(net_params, verbose=True):
             fOutAct=net_params["f0_act"],
             verbose=verbose,
             batch_size=net_params["batch_size"],
+            outputLayer=net_params["output_layer"],
         )
 
         if net_params["eta_force"] == "Hebb":

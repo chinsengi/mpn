@@ -206,9 +206,10 @@ def main():
                     "n_inputs": ob_size,  # input dim
                     "n_hidden": 100,  # hidden dim
                     "n_outputs": act_size,  # output dim
-                    "f_act": "softmax",  # 1st layer actiivation function # linear, sigmoid, tanh, relu
+                    "f_act": "tanh",  # 1st layer actiivation function # linear, sigmoid, tanh, relu, softmax
                     "f0_act": "linear",  # 2nd layer actiivation function
-                    "trainable_state0": False,
+                    "output_layer": "double",
+                    
                     # STPN Features
                     "A_act": None,  # Activation on the A update (tanh or None)
                     "lam_type": "matrix",
@@ -218,14 +219,14 @@ def main():
                     "hebb_type": "inputOutput",  # input, output, inputOutput
                     "modulation_bounds": False,  # bound modulations
                     "mod_bound_val": 0.1,
-                    "trainable_state0": True,  # Train the initial weights
+                    "trainable_state0": False,  # Train the initial weights
                     "mp_type": "free",
                     # Train parameters
                     "train_mode": "seq_inf",  # 'seq' or 'seq_inf'
                     "weight_reg": "L1",
                     "reg_lambda": 1e-4,
                     "hidden_bias": True,
-                    "ro_bias": False,  # use readout bias or not
+                    "ro_bias": True,  # use readout bias or not
                     "gradient_clip": 10,
                     "freeze_inputs": False,  # freeze the input layer (and hidden bias)
                     "sparsification": 0.0,  # Amount to sparsify network's weights (0.0 = no sparsification)

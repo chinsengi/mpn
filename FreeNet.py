@@ -730,8 +730,9 @@ class FreeNet(StatefulBase):
 
         return db
 
-
+import math
 def xavier_init(layer: nn.Linear):
-    nn.init.xavier_uniform_(layer.weight)
+    stdv = 1. / math.sqrt(layer.weight.size(1))
+    layer.weight.data.uniform_(-stdv, stdv)
     if layer.bias is not None:
-        nn.init.xavier_uniform_(layer.bias)
+        layer.bias.data.uniform_(-stdv, stdv)
