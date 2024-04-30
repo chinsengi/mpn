@@ -103,7 +103,7 @@ def train_network_ngym(
 def main():
     # All supervised tasks:
     tasks = (
-        "ContextDecisionMaking-v0",
+        # "ContextDecisionMaking-v0",
         # 'DelayComparison-v0',
         # 'DelayMatchCategory-v0',
         # 'DelayMatchSample-v0',
@@ -118,14 +118,14 @@ def main():
         # 'OneTwoThreeGo-v0',
         # 'PerceptualDecisionMaking-v0',
         # 'PerceptualDecisionMakingDelayResponse-v0',
-        # 'ProbabilisticReasoning-v0',
+        'ProbabilisticReasoning-v0',
         # 'PulseDecisionMaking-v0',
         # 'ReadySetGo-v0',
         # 'SingleContextDecisionMaking-v0',
     )
 
     tasks_masks = {
-        "ContextDecisionMaking-v0": "label",  # (no_fix too)
+        # "ContextDecisionMaking-v0": "label",  # (no_fix too)
         # 'DelayComparison-v0': 'label', # (no_fix too)
         # 'DelayMatchCategory-v0': 'label', # (no_fix too)
         # 'DelayMatchSample-v0': 'label', # (no_fix too)
@@ -140,7 +140,7 @@ def main():
         # 'OneTwoThreeGo-v0': None,
         # 'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
         # 'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
-        # 'ProbabilisticReasoning-v0': 'label', # (no_fix too)
+        'ProbabilisticReasoning-v0': 'label', # (no_fix too)
         # 'PulseDecisionMaking-v0': 'label', # (no_fix too)
         # 'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
         # 'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
@@ -178,8 +178,9 @@ def main():
     save = True
     train = False
     save = False
-    save_root = "./saved_nets/two_layer_output"
+    # save_root = "./saved_nets/two_layer_output"
     # save_root = './saved_nets'
+    save_root = './saved_nets/single_layer_output'
 
     n_trials = 1
     acc_thresh = 0.99
@@ -199,13 +200,13 @@ def main():
 
             for trial_idx in range(n_trials):
                 net_params = {
-                    "netType": "FreeNet",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
+                    "netType": "GRU",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
                     "n_inputs": ob_size,  # input dim
                     "n_hidden": 100,  # hidden dim
                     "n_outputs": act_size,  # output dim
                     "f_act": "tanh",  # 1st layer actiivation function # linear, sigmoid, tanh, relu, softmax
                     "f0_act": "linear",  # 2nd layer actiivation function
-                    "output_layer": "double",
+                    "output_layer": "double",  # single or double
                     
                     # STPN Features
                     "A_act": None,  # Activation on the A update (tanh or None)
@@ -269,8 +270,8 @@ def main():
     n_trials = 1  # For eta > 0 and eta < 0 figure
 
     load_types = [
-        "FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",  # note extra 2 here, original did not have acc cap
-        # 'GRU[10,500,{}]_train=seq_inf_task={}_{}len', # note extra 2 here, original did not have acc cap
+        # "FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",  
+        'GRU[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factorsmall_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factor_GRU[10,100,{}]_train=seq_inf_task={}_{}len',
         # 'convert10_1factor_VanillaRNN[10,100,{}]_train=seq_inf_task={}_{}len',
