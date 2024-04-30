@@ -83,7 +83,7 @@ class FreeLayer(nn.Module):
             init_string += "\n  "
 
         # Determines whether or not layer weights are trainable parameters
-        self.freezeLayer = mpnArgs.get("freezeLayer", False)
+        self.freezeLayer = mpnArgs.get("freezeInputs", False)
         if self.freezeLayer:  # Does not train input layer
             init_string += "W: Frozen // "
             self.register_buffer("w1", torch.tensor(W[0], dtype=torch.float))
@@ -277,29 +277,14 @@ class FreeLayer(nn.Module):
             )  # eta = exp(_eta)
             self.eta = torch.exp(self._eta)
         else:  # Unconstrained eta
-            if self.freezeLayer:
-                if self.etaType != "scalar":
-                    raise NotImplementedError(
-                        "Still need to set defaults for non-scalar eta"
-                    )
-                # self.register_buffer('_eta', torch.tensor(-1.0, dtype=torch.float)) # Anti-hebbian
-                self.register_buffer("_eta", torch.tensor(1.0, dtype=torch.float))
-                self.eta = self._eta
-            else:
-                self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float))
-                self.eta = self._eta.data
+            self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float), requires_grad=not self.freezeLayer)
+            # self.register_buffer('_eta', torch.tensor(-1.0, dtype=torch.float)) # Anti-hebbian
+            # self.register_buffer("_eta", torch.tensor(1.0, dtype=torch.float))
+            self.eta = self._eta.data   
 
         # Setting lambda parameter
-        if self.freezeLayer:
-            if self.lamType != "scalar":
-                raise NotImplementedError(
-                    "Still need to set defaults for non-scalar lambda"
-                )
-            self.register_buffer("_lam", torch.tensor(self.lamClamp))
-            self.lam = self._lam
-        else:
-            self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float))
-            self.lam = self._lam.data
+        self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float), requires_grad=not self.freezeLayer)
+        self.lam = self._lam.data
 
     def update_sm_matrix(self, pre, post, stateOnly=False):
         """

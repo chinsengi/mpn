@@ -176,10 +176,11 @@ def main():
 
     train = True
     save = True
-    train = False
-    save = False
-    save_root = "./saved_nets/two_layer_output"
+    # train = False
+    # save = False
+    # save_root = "./saved_nets/two_layer_output"
     # save_root = './saved_nets'
+    save_root = './saved_nets/softmax'
 
     n_trials = 1
     acc_thresh = 0.99
