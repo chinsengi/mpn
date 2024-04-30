@@ -31,7 +31,7 @@ def train_network_ngym(
 
     # Intitializes network and puts it on device
     if verbose:
-        print(f"Using {device}...")
+        logging.info(f"Using {device}...")
         
     if current_net is None:  # Creates a new network
         net = init_net(net_params, verbose=verbose)
@@ -95,55 +95,56 @@ def train_network_ngym(
             net, net_params, dataset_params, save_root, overwrite=False, verbose=verbose
         )
     else:
-        print("Not saving network.")
+        logging.info("Not saving network.")
 
     return net, net_params
 
-
 def main():
+    save_dir = "./log/"
+    setup_logger(save_dir)
     # All supervised tasks:
     tasks = (
         "ContextDecisionMaking-v0",
-        'DelayComparison-v0',
-        'DelayMatchCategory-v0',
-        'DelayMatchSample-v0',
-        'DelayMatchSampleDistractor1D-v0',
-        'DelayPairedAssociation-v0',
-        'DualDelayMatchSample-v0',
-        'GoNogo-v0',
-        'HierarchicalReasoning-v0',
-        'IntervalDiscrimination-v0',
-        'MotorTiming-v0',
-        'MultiSensoryIntegration-v0',
-        'OneTwoThreeGo-v0',
-        'PerceptualDecisionMaking-v0',
-        'PerceptualDecisionMakingDelayResponse-v0',
-        'ProbabilisticReasoning-v0',
-        'PulseDecisionMaking-v0',
-        'ReadySetGo-v0',
-        'SingleContextDecisionMaking-v0',
+        # 'DelayComparison-v0',
+        # 'DelayMatchCategory-v0',
+        # 'DelayMatchSample-v0',
+        # 'DelayMatchSampleDistractor1D-v0',
+        # 'DelayPairedAssociation-v0',
+        # 'DualDelayMatchSample-v0',
+        # 'GoNogo-v0',
+        # 'HierarchicalReasoning-v0',
+        # 'IntervalDiscrimination-v0',
+        # 'MotorTiming-v0',
+        # 'MultiSensoryIntegration-v0',
+        # 'OneTwoThreeGo-v0',
+        # 'PerceptualDecisionMaking-v0',
+        # 'PerceptualDecisionMakingDelayResponse-v0',
+        # 'ProbabilisticReasoning-v0',
+        # 'PulseDecisionMaking-v0',
+        # 'ReadySetGo-v0',
+        # 'SingleContextDecisionMaking-v0',
     )
 
     tasks_masks = {
         "ContextDecisionMaking-v0": "label",  # (no_fix too)
-        'DelayComparison-v0': 'label', # (no_fix too)
-        'DelayMatchCategory-v0': 'label', # (no_fix too)
-        'DelayMatchSample-v0': 'label', # (no_fix too)
-        'DelayMatchSampleDistractor1D-v0': 'no_fix',
-        'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
-        'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
-        'GoNogo-v0': 'no_fix', # (timing task, could improve)
-        'HierarchicalReasoning-v0': None,
-        'IntervalDiscrimination-v0': 'label', # (no_fix too)
-        'MotorTiming-v0': 'no_fix', # (timing task, could improve)
-        'MultiSensoryIntegration-v0': 'label', # (no_fix too)
-        'OneTwoThreeGo-v0': None,
-        'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
-        'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
-        'ProbabilisticReasoning-v0': 'label', # (no_fix too)
-        'PulseDecisionMaking-v0': 'label', # (no_fix too)
-        'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
-        'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
+        # 'DelayComparison-v0': 'label', # (no_fix too)
+        # 'DelayMatchCategory-v0': 'label', # (no_fix too)
+        # 'DelayMatchSample-v0': 'label', # (no_fix too)
+        # 'DelayMatchSampleDistractor1D-v0': 'no_fix',
+        # 'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
+        # 'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
+        # 'GoNogo-v0': 'no_fix', # (timing task, could improve)
+        # 'HierarchicalReasoning-v0': None,
+        # 'IntervalDiscrimination-v0': 'label', # (no_fix too)
+        # 'MotorTiming-v0': 'no_fix', # (timing task, could improve)
+        # 'MultiSensoryIntegration-v0': 'label', # (no_fix too)
+        # 'OneTwoThreeGo-v0': None,
+        # 'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
+        # 'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
+        # 'ProbabilisticReasoning-v0': 'label', # (no_fix too)
+        # 'PulseDecisionMaking-v0': 'label', # (no_fix too)
+        # 'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
+        # 'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
     }
 
     kwargs = {"dt": 100}
@@ -169,15 +170,15 @@ def main():
         ob_size = env.observation_space.shape[0]
         act_size = env.action_space.n
 
-        print("Task {}: {}".format(task_idx, task))
-        print("  Observation size: {}, Action size: {}".format(ob_size, act_size))
+        logging.info("Task {}: {}".format(task_idx, task))
+        logging.info("  Observation size: {}, Action size: {}".format(ob_size, act_size))
 
         datasets_params.append(dataset_params)
 
     train = True
     save = True
     # train = False
-    # save = False
+    save = False
     # # save_root = "./saved_nets/two_layer_output"
     # save_root = './saved_nets'
     save_root = './saved_nets/softmax'
@@ -193,7 +194,7 @@ def main():
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
 
-            print("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
+            logging.info("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
 
             env = dataset_params["dataset"].env
             ob_size = env.observation_space.shape[0]
@@ -201,7 +202,7 @@ def main():
 
             for trial_idx in range(n_trials):
                 net_params = {
-                    "netType": "GRU",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
+                    "netType": "GRU",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M, FreeNet
                     "n_inputs": ob_size,  # input dim
                     "n_hidden": 100,  # hidden dim
                     "n_outputs": act_size,  # output dim
@@ -248,7 +249,7 @@ def main():
                 # # Keep forgetting to turn this on for RNNs, so just automate it
                 # net_params['hidden_bias'] = False if net_params['netType'] in ('HebbNet', 'HebbNet_M') else True
 
-                print("Trial: {}".format(trial_idx))
+                logging.info("Trial: {}".format(trial_idx))
                 verbose = True if trial_idx == 0 else False
                 _, net_params = train_network_ngym(
                     net_params,
@@ -260,7 +261,7 @@ def main():
                     device=device,
                 )
     else:
-        print("Not training (set train=True if you want to train).")
+        logging.info("Not training (set train=True if you want to train).")
 
     ############
     # Evaluate!#
@@ -294,7 +295,7 @@ def main():
 
         # Uses the dataset_params array created above just to specify loading name
         dataset_params = datasets_params[task_idx]
-        print("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
+        logging.info("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
 
         # Have to recreate the dataset in dataset_params_load since its not saved
         kwargs = {"dt": dataset_params["dt"]}
@@ -356,7 +357,7 @@ def main():
                 #     else:
                 #         accs_neg_eta[load_idx][task_idx].append(db_load['acc'])
 
-            print("  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1)))
+            logging.info("  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1)))
             # if load_idx in (0, 1,):
             #     print('    Pos eta: {}, Neg eta: {}'.format(
             #         len(accs_pos_eta[load_idx][task_idx]), len(accs_neg_eta[load_idx][task_idx]))

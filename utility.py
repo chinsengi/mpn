@@ -466,3 +466,17 @@ def use_gpu(gpu_id: int = 0):
     device = f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
     return device
+
+import logging
+def setup_logger(save_dir, level=logging.INFO):
+    handler1 = logging.StreamHandler()
+    handler2 = logging.FileHandler(os.path.join(save_dir, "stdout.txt"))
+    formatter = logging.Formatter(
+        "%(levelname)s - %(filename)s - %(asctime)s - %(message)s"
+    )
+    handler1.setFormatter(formatter)
+    handler2.setFormatter(formatter)
+    logger = logging.getLogger()
+    logger.addHandler(handler1)
+    logger.addHandler(handler2)
+    logger.setLevel(level)

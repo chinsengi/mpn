@@ -1,3 +1,4 @@
+import logging
 import os, time, importlib, errno
 import matplotlib.pyplot as plt
 
@@ -100,7 +101,7 @@ class NetworkBase(nn.Module):
         if (
             self.verbose and self.newThresh
         ):  # Only prints training details if newThreshold
-            print(init_string)
+            logging.info(init_string)
 
         self.mointorFreq = kwargs.pop("monitorFreq", 10)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
@@ -182,7 +183,7 @@ class NetworkBase(nn.Module):
                         1.0 * self.hist["avg_valid_loss"][-STEPS_BACK]
                         < self.hist["avg_valid_loss"][-1]
                     ):
-                        print(
+                        logging.info(
                             "  Early Stop: avg_valid_loss saturated, current (-1): {:.2e}, prev (-{}): {:.2e}, acc: {:.2f}".format(
                                 self.hist["avg_valid_loss"][-1],
                                 STEPS_BACK,
@@ -195,7 +196,7 @@ class NetworkBase(nn.Module):
                     validStopThres is not None
                     and self.hist["avg_valid_acc"][-1] > validStopThres
                 ):
-                    print(
+                    logging.info(
                         "  Early Stop: valid accuracy threshold reached: {:.2f}".format(
                             self.hist["avg_valid_acc"][-1]
                         )
@@ -204,7 +205,7 @@ class NetworkBase(nn.Module):
                 if (
                     self.hist["iter"] > minMaxIter[1]
                 ):  # Early stop if above maximum numbers of iters
-                    print(
+                    logging.info(
                         "  Early Stop: maximum iterations reached, acc: {:.2f}".format(
                             self.hist["avg_valid_acc"][-1]
                         )
@@ -284,7 +285,7 @@ class NetworkBase(nn.Module):
             param_sim_term = 0.0
 
         if outputMask is None:
-            print("XE probably wont work here")
+            logging.info("XE probably wont work here")
             return self.loss_fn(out, batch[1]) + reg_term
         else:  # Modify output by the mask
             # Last index of outputMask not needed because labels are [B, T]
@@ -345,7 +346,7 @@ class NetworkBase(nn.Module):
             )
         else:
             if self.verbose:
-                print(
+                logging.info(
                     "Network already partially trained. Last iter {}".format(
                         self.hist["iter"]
                     )
@@ -455,7 +456,7 @@ class NetworkBase(nn.Module):
                 )
 
             if self.verbose:
-                print(displayStr)
+                logging.info(displayStr)
             self.autosave()
             return out
 
@@ -489,7 +490,7 @@ class NetworkBase(nn.Module):
         state = self.state_dict()
         state.update({"hist": self.hist})
         if self.verbose:
-            print("  Saving net to: {}".format(filename))
+            logging.info("  Saving net to: {}".format(filename))
         torch.save(state, filename)
 
         if device != torch.device("cpu"):
@@ -512,7 +513,7 @@ class NetworkBase(nn.Module):
                     localParam = getattr(localParam, k)
 
                 if localParam.shape != checkptParam.shape:
-                    print(
+                    logging.warning(
                         "WARNING: shape mismatch between local {} ({}) and checkpoint ({}). Setting local {} to be {}".format(
                             k,
                             localParam.shape,
@@ -680,7 +681,7 @@ def train_infinite(net, gen_data, iters=float("inf"), batchSize=None, earlyStop=
             converged = False
 
         if converged:
-            print("Converged, stopping early.")
+            logging.info("Converged, stopping early.")
             break
 
 
@@ -711,7 +712,7 @@ def train_curriculum(
         if converged:
             R = increment(R)
             latestIncrementIter = net.hist["iter"]
-            print("Converged. Setting R<--{} \n".format(R))
+            logging.info("Converged. Setting R<--{} \n".format(R))
             net.hist["increment_R"].append((net.hist["iter"], R))
             net.autosave(force=True)
 
@@ -771,7 +772,7 @@ def train_multiR_curriculum(
             Rlo, Rhi = increment(Rlo, Rhi)
             Rlist = spacing(Rlo, Rhi)
             latestIncrementIter = net.hist["iter"]
-            print(
+            logging.info(
                 "acc(Rchance)>0.55. Setting Rlist=[{}...{}] \n".format(
                     Rlist[0], Rlist[-1]
                 )

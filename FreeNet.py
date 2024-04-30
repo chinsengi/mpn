@@ -1,3 +1,4 @@
+import logging
 import itertools
 import torch
 from torch import nn
@@ -188,7 +189,7 @@ class FreeLayer(nn.Module):
         init_string += "Lambda_max: {:.2f}".format(self.lamClamp)
 
         if self.verbose:  # Full summary of network parameters
-            print(init_string)
+            logging.info(init_string)
 
         # Register_buffer
         self.register_buffer("M", None)
@@ -197,7 +198,7 @@ class FreeLayer(nn.Module):
                 mpnArgs.get("batch_size", 1)
             )  # Sets Hebbian weights to initial values (M0)
         except AttributeError as e:
-            print("Warning: {}. Not running reset_state() in mpnNet.__init__".format(e))
+            logging.warning("Warning: {}. Not running reset_state() in mpnNet.__init__".format(e))
 
         self.register_buffer("plastic", torch.tensor(True))
         self.register_buffer(
@@ -497,7 +498,7 @@ class FreeNet(StatefulBase):
         if (
             self.verbose
         ):  # Full summary of readout parameters (MP layer prints out internally)
-            print(init_string)
+            logging.info(init_string)
             
         self.device = mpnArgs.get("device", "cuda")
             
