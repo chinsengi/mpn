@@ -1,3 +1,4 @@
+import logging
 import itertools
 import torch
 from torch import nn
@@ -194,7 +195,7 @@ class HebbNet(StatefulBase):
             )
 
         if self.verbose:  # Full summary of network parameters
-            print(init_string)
+            logging.info(init_string)
 
         # Register_buffer
         self.register_buffer("A", None)
@@ -2188,7 +2189,7 @@ class VanillaRNN(StatefulBase):
             init_string += "\n  h0: zeros"
 
         if self.verbose:
-            print(init_string)
+            logging.info(init_string)
 
         if resetState:  # Don't want state to be reset when child calls it
             self.reset_state()

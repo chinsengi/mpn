@@ -31,7 +31,7 @@ def train_network_ngym(
 
     # Intitializes network and puts it on device
     if verbose:
-        print(f"Using {device}...")
+        logging.info(f"Using {device}...")
         
     if current_net is None:  # Creates a new network
         net = init_net(net_params, verbose=verbose)
@@ -95,12 +95,13 @@ def train_network_ngym(
             net, net_params, dataset_params, save_root, overwrite=False, verbose=verbose
         )
     else:
-        print("Not saving network.")
+        logging.info("Not saving network.")
 
     return net, net_params
 
-
 def main():
+    save_dir = "./log/"
+    setup_logger(save_dir)
     # All supervised tasks:
     tasks = (
         # "ContextDecisionMaking-v0",
@@ -169,15 +170,15 @@ def main():
         ob_size = env.observation_space.shape[0]
         act_size = env.action_space.n
 
-        print("Task {}: {}".format(task_idx, task))
-        print("  Observation size: {}, Action size: {}".format(ob_size, act_size))
+        logging.info("Task {}: {}".format(task_idx, task))
+        logging.info("  Observation size: {}, Action size: {}".format(ob_size, act_size))
 
         datasets_params.append(dataset_params)
 
     train = True
     save = True
     # train = False
-    # save = False
+    save = False
     # # save_root = "./saved_nets/two_layer_output"
     # save_root = './saved_nets'
     save_root = './saved_nets/softmax'
@@ -193,7 +194,7 @@ def main():
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
 
-            print("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
+            logging.info("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
 
             env = dataset_params["dataset"].env
             ob_size = env.observation_space.shape[0]
@@ -201,7 +202,7 @@ def main():
 
             for trial_idx in range(n_trials):
                 net_params = {
-                    "netType": "GRU",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M
+                    "netType": "GRU",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M, FreeNet
                     "n_inputs": ob_size,  # input dim
                     "n_hidden": 100,  # hidden dim
                     "n_outputs": act_size,  # output dim
@@ -248,7 +249,7 @@ def main():
                 # # Keep forgetting to turn this on for RNNs, so just automate it
                 # net_params['hidden_bias'] = False if net_params['netType'] in ('HebbNet', 'HebbNet_M') else True
 
-                print("Trial: {}".format(trial_idx))
+                logging.info("Trial: {}".format(trial_idx))
                 verbose = True if trial_idx == 0 else False
                 _, net_params = train_network_ngym(
                     net_params,
@@ -260,7 +261,7 @@ def main():
                     device=device,
                 )
     else:
-        print("Not training (set train=True if you want to train).")
+        logging.info("Not training (set train=True if you want to train).")
 
     ############
     # Evaluate!#
@@ -294,7 +295,7 @@ def main():
 
         # Uses the dataset_params array created above just to specify loading name
         dataset_params = datasets_params[task_idx]
-        print("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
+        logging.info("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
 
         # Have to recreate the dataset in dataset_params_load since its not saved
         kwargs = {"dt": dataset_params["dt"]}
@@ -356,7 +357,7 @@ def main():
                 #     else:
                 #         accs_neg_eta[load_idx][task_idx].append(db_load['acc'])
 
-            print("  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1)))
+            logging.info("  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1)))
             # if load_idx in (0, 1,):
             #     print('    Pos eta: {}, Neg eta: {}'.format(
             #         len(accs_pos_eta[load_idx][task_idx]), len(accs_neg_eta[load_idx][task_idx]))
