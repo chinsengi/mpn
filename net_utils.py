@@ -104,6 +104,7 @@ class NetworkBase(nn.Module):
 
         self.mointorFreq = kwargs.pop("monitorFreq", 10)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.95)
         self.train()  # put Module in train mode (e.g. for dropout)
         # with Timer() as timer:
         early_stop = train_fn(self, *args, **kwargs)
@@ -626,6 +627,7 @@ def train_dataset(
             validOutputMask=validOutputMask,
             minMaxIter=minMaxIter,
         )
+        net.scheduler.step()
         if converged:
             early_stop = True
             break

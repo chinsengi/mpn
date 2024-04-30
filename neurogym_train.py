@@ -74,7 +74,7 @@ def train_network_ngym(
                 trainData=trainData,
                 batchSize=net_params["batch_size"],
                 validBatch=validData[:, :, :],
-                learningRate=1e-3,
+                learningRate=5e-3,
                 newThresh=new_thresh,
                 monitorFreq=200,
                 trainOutputMask=trainOutputMask,
@@ -103,47 +103,47 @@ def train_network_ngym(
 def main():
     # All supervised tasks:
     tasks = (
-        # "ContextDecisionMaking-v0",
-        # 'DelayComparison-v0',
-        # 'DelayMatchCategory-v0',
-        # 'DelayMatchSample-v0',
-        # 'DelayMatchSampleDistractor1D-v0',
-        # 'DelayPairedAssociation-v0',
-        # 'DualDelayMatchSample-v0',
-        # 'GoNogo-v0',
-        # 'HierarchicalReasoning-v0',
-        # 'IntervalDiscrimination-v0',
-        # 'MotorTiming-v0',
-        # 'MultiSensoryIntegration-v0',
-        # 'OneTwoThreeGo-v0',
-        # 'PerceptualDecisionMaking-v0',
-        # 'PerceptualDecisionMakingDelayResponse-v0',
+        "ContextDecisionMaking-v0",
+        'DelayComparison-v0',
+        'DelayMatchCategory-v0',
+        'DelayMatchSample-v0',
+        'DelayMatchSampleDistractor1D-v0',
+        'DelayPairedAssociation-v0',
+        'DualDelayMatchSample-v0',
+        'GoNogo-v0',
+        'HierarchicalReasoning-v0',
+        'IntervalDiscrimination-v0',
+        'MotorTiming-v0',
+        'MultiSensoryIntegration-v0',
+        'OneTwoThreeGo-v0',
+        'PerceptualDecisionMaking-v0',
+        'PerceptualDecisionMakingDelayResponse-v0',
         'ProbabilisticReasoning-v0',
-        # 'PulseDecisionMaking-v0',
-        # 'ReadySetGo-v0',
-        # 'SingleContextDecisionMaking-v0',
+        'PulseDecisionMaking-v0',
+        'ReadySetGo-v0',
+        'SingleContextDecisionMaking-v0',
     )
 
     tasks_masks = {
-        # "ContextDecisionMaking-v0": "label",  # (no_fix too)
-        # 'DelayComparison-v0': 'label', # (no_fix too)
-        # 'DelayMatchCategory-v0': 'label', # (no_fix too)
-        # 'DelayMatchSample-v0': 'label', # (no_fix too)
-        # 'DelayMatchSampleDistractor1D-v0': 'no_fix',
-        # 'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
-        # 'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
-        # 'GoNogo-v0': 'no_fix', # (timing task, could improve)
-        # 'HierarchicalReasoning-v0': None,
-        # 'IntervalDiscrimination-v0': 'label', # (no_fix too)
-        # 'MotorTiming-v0': 'no_fix', # (timing task, could improve)
-        # 'MultiSensoryIntegration-v0': 'label', # (no_fix too)
-        # 'OneTwoThreeGo-v0': None,
-        # 'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
-        # 'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
+        "ContextDecisionMaking-v0": "label",  # (no_fix too)
+        'DelayComparison-v0': 'label', # (no_fix too)
+        'DelayMatchCategory-v0': 'label', # (no_fix too)
+        'DelayMatchSample-v0': 'label', # (no_fix too)
+        'DelayMatchSampleDistractor1D-v0': 'no_fix',
+        'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
+        'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
+        'GoNogo-v0': 'no_fix', # (timing task, could improve)
+        'HierarchicalReasoning-v0': None,
+        'IntervalDiscrimination-v0': 'label', # (no_fix too)
+        'MotorTiming-v0': 'no_fix', # (timing task, could improve)
+        'MultiSensoryIntegration-v0': 'label', # (no_fix too)
+        'OneTwoThreeGo-v0': None,
+        'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
+        'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
         'ProbabilisticReasoning-v0': 'label', # (no_fix too)
-        # 'PulseDecisionMaking-v0': 'label', # (no_fix too)
-        # 'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
-        # 'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
+        'PulseDecisionMaking-v0': 'label', # (no_fix too)
+        'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
+        'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
     }
 
     kwargs = {"dt": 100}
@@ -205,9 +205,9 @@ def main():
                     "n_inputs": ob_size,  # input dim
                     "n_hidden": 100,  # hidden dim
                     "n_outputs": act_size,  # output dim
-                    "f_act": "tanh",  # 1st layer actiivation function # linear, sigmoid, tanh, relu, softmax
+                    "f_act": "relu",  # 1st layer actiivation function # linear, sigmoid, tanh, relu, softmax
                     "f0_act": "linear",  # 2nd layer actiivation function
-                    "output_layer": "double",  # single or double
+                    "output_layer": "single",  # single or double
                     
                     # STPN Features
                     "A_act": None,  # Activation on the A update (tanh or None)
