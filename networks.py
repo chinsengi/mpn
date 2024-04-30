@@ -2089,6 +2089,8 @@ class VanillaRNN(StatefulBase):
             self.f = torch.tanh
         elif self.fAct == "relu":
             self.f = torch.relu
+        elif self.fAct == "softmax":
+            self.f = torch.softmax
         else:
             raise ValueError("f activaiton not recognized")
 
@@ -2381,7 +2383,13 @@ class GRU(VanillaRNN):
             )
             a1 = a1 + batch_noise
 
-        h_new = self.f(a1) if self.f is not None else a2
+        # h_new = self.f(a1) if self.f is not None else a1
+        if self.fAct == "softmax":
+            h_new = self.f(a1, -2)
+        elif self.f is not None:
+            h_new = self.f(a1)
+        else:
+            h_new = a1
 
         h = (torch.ones_like(zg) - zg) * h_new + zg * self.h
         if stateOnly:
