@@ -269,8 +269,8 @@ class HebbNet(StatefulBase):
                 low=0.0,
                 high=self.lamClamp,
                 size=(
-                    self.n_inputs,
                     self.n_hidden,
+                    self.n_inputs,
                 ),
             )
             lam = lam[np.newaxis, :, :]  # makes (1, Nh, Nx)
@@ -387,7 +387,6 @@ class HebbNet(StatefulBase):
         # print('x', x.shape)
         # print('b1', self.b1.shape)
         # print('w1', self.w1.shape)
-        # breakpoint()
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
@@ -591,7 +590,7 @@ class HebbNet(StatefulBase):
             runValid=runValid,
         )
 
-        if self.hist["iter"] % self.mointorFreq == 0 or runValid:
+        if self.hist["iter"] % self.monitorFreq == 0 or runValid:
             self.hist["eta"].append(self._eta.data.cpu().numpy())
             self.hist["lam"].append(self._lam.data.cpu().numpy())
 
@@ -2445,6 +2444,7 @@ class GRU(VanillaRNN):
         return db
 
 
+
 class LSTM(VanillaRNN):
     def __init__(self, init, f=torch.tanh, fOut=torch.sigmoid):
         super(VanillaRNN, self).__init__()
@@ -2512,28 +2512,31 @@ class nnLSTM(VanillaRNN):
     """Should be identical to implementation above, but uses PyTorch internals for LSTM layer instead"""
 
     def __init__(
-        self, init, f=None, fOut=torch.sigmoid
+        self, init, f=None, fOut=torch.sigmoid, batch_size=1, device="cuda"
     ):  # f is ignored. Included to have same signature as VanillaRNN
         super(VanillaRNN, self).__init__()
 
         Nx, Nh, Ny = init  # TODO: allow manual initialization
         self.lstm = nn.LSTMCell(Nx, Nh)
+        self.n_outputs = Ny
+        self.n_inputs = Nx
 
         Wy, by = random_weight_init([Nh, Ny], bias=True)
         self.Wy = nn.Parameter(torch.tensor(Wy[0], dtype=torch.float))
         self.by = nn.Parameter(torch.tensor(by[0], dtype=torch.float))
 
-        self.loss_fn = F.binary_cross_entropy
-        self.acc_fn = binary_classifier_accuracy
+        self.loss_fn = F.cross_entropy  # Reductions is mean by default
+        self.acc_fn = xe_classifier_accuracy
         self.fOut = fOut
+        self.device = device
 
-        self.reset_state()
+        self.reset_state(batch_size)
 
-    def reset_state(self):
-        self.h = torch.zeros(1, self.lstm.hidden_size)
-        self.c = torch.zeros(1, self.lstm.hidden_size)
+    def reset_state(self, batchSize=1):
+        self.h = torch.zeros(batchSize, self.lstm.hidden_size).to(self.device)
+        self.c = torch.zeros(batchSize, self.lstm.hidden_size).to(self.device)
 
     def forward(self, x):
-        self.h, self.c = self.lstm(x.unsqueeze(0), (self.h, self.c))
+        self.h, self.c = self.lstm(x, (self.h, self.c))
         y = self.fOut(F.linear(self.h, self.Wy, self.by))
         return y

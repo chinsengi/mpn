@@ -1,5 +1,5 @@
 from net_utils import xe_classifier_accuracy
-from paper.data import convert_serialized_mnist
+from data import convert_serialized_mnist
 import os
 import pickle
 import copy
@@ -33,7 +33,8 @@ def init_net(net_params, verbose=True, device="cpu"):
     # initialize net with default values
     if net_params["netType"] == "nnLSTM":
         net = nets.nnLSTM(
-            [net_params["n_inputs"], net_params["n_hidden"], net_params["n_outputs"]]
+            [net_params["n_inputs"], net_params["n_hidden"], net_params["n_outputs"]],
+            batch_size = net_params["batch_size"],device=device
         )
     elif net_params["netType"] == "GRU":
         net = nets.GRU(
@@ -96,6 +97,7 @@ def init_net(net_params, verbose=True, device="cpu"):
             updateType="hebb",
             lamClamp=net_params["lam_clamp"],
             lamType=net_params["lam_type"],
+            layerBias=net_params["layer_bias"],
             hebbType=net_params["hebb_type"],
             mpType=net_params["mp_type"],
             etaType=net_params["eta_type"],
@@ -284,6 +286,7 @@ def load_net(filename, seed, device="cpu"):
     """
     filename = filename + "_seed{}.pkl".format(seed)
 
+    logging.info(f"Loading network from {filename}")
     if not os.path.exists(filename):
         raise ValueError("No file at path:", filename)
     else:
@@ -296,8 +299,7 @@ def load_net(filename, seed, device="cpu"):
             )  # toy_params or dataset_details
 
         # Using loaded net and toy parameters, creates new network
-        net_load = init_net(net_params_load, verbose=False, device=device)
-
+        net_load = init_net(net_params_load, verbose=True, device=device)
         with open(state_filename, "rb") as load_file:
             net_load.load(load_file)
         net_load.to(device)
@@ -468,9 +470,10 @@ def use_gpu(gpu_id: int = 0):
     return device
 
 import logging
-def setup_logger(save_dir, level=logging.INFO):
+def setup_logger(save_dir, filename="stdout.txt", level=logging.INFO):
+    create_dir(save_dir)
     handler1 = logging.StreamHandler()
-    handler2 = logging.FileHandler(os.path.join(save_dir, "stdout.txt"))
+    handler2 = logging.FileHandler(os.path.join(save_dir, filename))
     formatter = logging.Formatter(
         "%(levelname)s - %(filename)s - %(asctime)s - %(message)s"
     )
@@ -480,3 +483,24 @@ def setup_logger(save_dir, level=logging.INFO):
     logger.addHandler(handler1)
     logger.addHandler(handler2)
     logger.setLevel(level)
+    
+import matplotlib.pyplot as plt
+import time
+def create_dir(path="./model"):
+    isExist = os.path.exists(path)
+    if not isExist:
+        print(f"Creating directory: {path}")
+        os.makedirs(path)
+        
+def savefig(path="./image", filename="image", format="png", include_timestamp=True):
+    create_dir(path)
+    if include_timestamp:
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+    else:
+        current_time = ""
+    plt.savefig(
+        os.path.join(path, current_time + filename + "." + format),
+        dpi=300,
+        format=format,
+    )

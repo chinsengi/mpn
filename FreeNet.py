@@ -165,10 +165,16 @@ class FreeLayer(nn.Module):
             init_string += "M0: trainable"
             self.M0 = nn.Parameter(torch.tensor(W2[0], dtype=torch.float))
         else:
-            init_string += "M0: zeros"
-            self.register_buffer(
-                "M0", torch.zeros_like(torch.tensor(W2[0], dtype=torch.float))
-            )
+            init_string += "M0: random"
+            # self.register_buffer(
+            #     "M0", torch.zeros_like(torch.tensor(W2[0], dtype=torch.float))
+            # )
+            self.M0 = nn.Parameter(torch.tensor(W2[0], dtype=torch.float), requires_grad=False)
+            # self.M0 = torch.zeros_like(torch.tensor(W2[0], dtype=torch.float))
+            # self.M0 = torch.tensor(W2[0], dtype=torch.float, requires_grad=False)
+            # self.register_buffer(
+            #     "M0", torch.eye(torch.tensor(W2[0], dtype=torch.float))
+            # )
 
         # Change the type of eta parameter
         self.etaType = mpnArgs.get("etaType", "scalar")
@@ -213,8 +219,10 @@ class FreeLayer(nn.Module):
 
     def reset_state(self, batchSize=1):
         self.M = torch.ones(
-            batchSize, *self.w1.shape, device=self.w1.device
+            batchSize, *self.M0.shape, device=self.M0.device
         )  # shape=[B,Ny,Nx]
+        # breakpoint()
+        self.M0 = self.M0.to(self.M.device)
         self.M = self.M * self.M0.unsqueeze(0)  # (B, Ny, Nx) x (1, Ny, Nx)
 
     def init_sm_matrix(self):
@@ -312,7 +320,6 @@ class FreeLayer(nn.Module):
             post = torch.ones_like(post)
         elif self.hebbType == "output":
             pre = torch.ones_like(pre)
-
         if self.plastic:
             if self.groundTruthPlast:  # and isFam: # only decays hebbian weights
                 raise NotImplementedError(
@@ -320,11 +327,12 @@ class FreeLayer(nn.Module):
                 )
                 M = self.lam * self.M
             elif self.updateType == "hebb":  # normal hebbian update
-                M = self.lam * self.M + self.eta * torch.bmm(post, pre.unsqueeze(1))
                 if self.MAct == "tanh":
                     M = torch.tanh(
                         self.lam * self.M + self.eta * torch.bmm(post, pre.unsqueeze(1))
                     )  # [B, Ny, 1] x [B, 1, Nx] = [B, Ny, Nx]
+                else:
+                    M = self.lam * self.M + self.eta * torch.bmm(post, pre.unsqueeze(1))
             elif self.updateType == "hebb_norm":  # normal hebbian update
                 M_tilde = self.lam * self.M + self.eta * torch.bmm(
                     post, pre.unsqueeze(1)
@@ -352,17 +360,14 @@ class FreeLayer(nn.Module):
 
         x.shape: [B, Nx]
         b1.shape: [Ny]
-        w1.shape=[Ny,Nx],
         M.shape=[B,Ny,Nx],
 
         """
 
-        # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
 
         # print('M', self.M.shape)
         # print('x', x.shape)
         # print('b1', self.b1.shape)
-        # print('w1', self.w1.shape)
 
         # b1 + (w1 + A) * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
@@ -524,14 +529,12 @@ class FreeNet(StatefulBase):
 
         """
 
-        # w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
 
         # print('M', self.M.shape)
         # print('x', x.shape)
         # print('b1', self.b1.shape)
-        # print('w1', self.w1.shape)
 
-        # b1 + (w1 + A) * x
+        # b1 + M * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
         # Adds noise to the input
         if self.noiseType in ("input",):
@@ -610,7 +613,7 @@ class FreeNet(StatefulBase):
             runValid=runValid,
         )
 
-        if self.hist["iter"] % self.mointorFreq == 0 or runValid:
+        if self.hist["iter"] % self.monitorFreq == 0 or runValid:
             self.hist["eta"].append(self.mp_layer._eta.data.cpu().numpy())
             self.hist["lam"].append(self.mp_layer._lam.data.cpu().numpy())
 
@@ -682,7 +685,6 @@ class FreeNet(StatefulBase):
             "x": torch.empty(B, T, Nx),
             "h_tilde": torch.empty(B, T, Nh),
             "h": torch.empty(B, T, Nh),
-            "Wxb": torch.empty(B, T, Nh),
             "M": torch.empty(B, T, Nh, Nx),
             "Mx": torch.empty(B, T, Nh),
             "y_tilde": torch.empty(B, T, Ny),
@@ -694,6 +696,8 @@ class FreeNet(StatefulBase):
 
             db["x"][:, time_idx, :] = x
             # # Note A for this given time_idx was updated on the previous pass (so A[time_idx=0] will be A0)
+            # if time_idx ==99:
+            #     breakpoint()
             (
                 db["h_tilde"][:, time_idx, :],
                 db["h"][:, time_idx, :],
@@ -705,17 +709,12 @@ class FreeNet(StatefulBase):
                 self.mp_layer.M, x.unsqueeze(2)
             ).squeeze(2)
 
-            db["Wxb"][:, time_idx] = self.mp_layer.b1.unsqueeze(0) + torch.mm(
-                x, torch.transpose(self.mp_layer.w1, 0, 1)
-            )
-
         if acc:
             db["acc"] = self.accuracy(
                 batch,
                 out=db["out"].to(self.device),
                 outputMask=batchMask,
             ).item()
-
         return db
 
 import math

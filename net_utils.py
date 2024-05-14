@@ -103,9 +103,11 @@ class NetworkBase(nn.Module):
         ):  # Only prints training details if newThreshold
             logging.info(init_string)
 
-        self.mointorFreq = kwargs.pop("monitorFreq", 10)
+        self.monitorFreq = kwargs.pop("monitorFreq", 10)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.95)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            self.optimizer, gamma=0.9
+        )
         self.train()  # put Module in train mode (e.g. for dropout)
         # with Timer() as timer:
         early_stop = train_fn(self, *args, **kwargs)
@@ -132,44 +134,13 @@ class NetworkBase(nn.Module):
         for b in range(
             0, trainData.tensors[0].shape[0], batchSize
         ):  # trainData.tensors[0] is shape [B,T,Nx]
-            trainBatch = trainData[b : b + batchSize, :, :]
-
-            if trainOutputMask is not None:
-                trainOutputMaskBatch = trainOutputMask[b : b + batchSize, :, :]
-            else:
-                trainOutputMaskBatch = None
-
-            self.optimizer.zero_grad()
-
-            out = self.evaluate(trainBatch)  # expects shape [B,T,Nx], out: [B,T,Ny]
-            loss = self.average_loss(
-                trainBatch, out=out, outputMask=trainOutputMaskBatch
-            )
-            loss.backward()
-
-            if self.gradientClip is not None:
-                torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradientClip)
-
-            self.optimizer.step()
-
-            # Note: even though this is called every batch, only runs validation batch every monitor_freq batches
-            self._monitor(
-                trainBatch,
-                validBatch=validBatch,
-                out=out,
-                loss=loss,
-                trainOutputMaskBatch=trainOutputMaskBatch,
-                validOutputMask=validOutputMask,
-            )
-            # self._monitor(trainBatch, validBatch=validBatch, trainOutputMaskBatch=trainOutputMaskBatch, validOutputMask=validOutputMask)
-
-            # if earlyStopValid and len(self.hist['valid_loss'])>1 and self.hist['valid_loss'][-1] > self.hist['valid_loss'][-2]:
+            # breakpoint()
             STEPS_BACK = 10
             # Stop if the avg_valid_loss has asymptoted (or starts to increase)
             # (since rolling average is 10 monitors, 2*STEPS_BACK makes sure there are two full averages available for comparison,
             #  subtracting self.hist['monitor_thresh'][-1] prevents this threshold from being tested when a network continues training,)
             if (
-                self.hist["iter"] > minMaxIter[0]
+                self.hist["iter"] > minMaxIter[0] and (b//32+1) % self.monitorFreq == 0
             ):  # Only early stops when above minimum iteration count
                 if (
                     earlyStopValid
@@ -211,6 +182,38 @@ class NetworkBase(nn.Module):
                         )
                     )
                     return True
+                
+            
+            trainBatch = trainData[b : b + batchSize, :, :]
+
+            if trainOutputMask is not None:
+                trainOutputMaskBatch = trainOutputMask[b : b + batchSize, :, :]
+            else:
+                trainOutputMaskBatch = None
+
+            self.optimizer.zero_grad()
+
+            out = self.evaluate(trainBatch)  # expects shape [B,T,Nx], out: [B,T,Ny]
+            loss = self.average_loss(
+                trainBatch, out=out, outputMask=trainOutputMaskBatch
+            )
+            loss.backward()
+
+            if self.gradientClip is not None:
+                torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradientClip)
+
+            self.optimizer.step()
+
+            # Note: even though this is called every batch, only runs validation batch every monitor_freq batches
+            self._monitor(
+                trainBatch,
+                validBatch=validBatch,
+                out=out,
+                loss=loss,
+                trainOutputMaskBatch=trainOutputMaskBatch,
+                validOutputMask=validOutputMask,
+            )
+            
             # if earlyStop and sum(self.hist['train_acc'][-5:]) >= 4.99: #not a proper early-stop criterion but useful for infinite data regime
             #     return True
         return False
@@ -379,7 +382,7 @@ class NetworkBase(nn.Module):
         self.hist["iter"] += 1
 
         if (
-            self.hist["iter"] % self.mointorFreq == 0 or runValid
+            self.hist["iter"] % self.monitorFreq == 0 or runValid
         ):  # TODO: allow choosing monitoring interval
             if out is None:
                 out = self.evaluate(trainBatch)

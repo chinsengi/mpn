@@ -2,7 +2,9 @@ import neurogym as ngym
 import torch
 import numpy as np
 from utility import *
-
+import matplotlib.pyplot as plt
+import jetplot
+from plot_util import *
 
 def train_network_ngym(
     net_params,
@@ -32,9 +34,9 @@ def train_network_ngym(
     # Intitializes network and puts it on device
     if verbose:
         logging.info(f"Using {device}...")
-        
+
     if current_net is None:  # Creates a new network
-        net = init_net(net_params, verbose=verbose)
+        net = init_net(net_params, verbose=verbose, device=device)
         # print('w1:', net.w1.detach().numpy()[:2,:2])
         # print('b1:', net.b1.detach().numpy()[:2])
         # print('wr:', net.wr.detach().numpy()[:2,:2])
@@ -74,9 +76,9 @@ def train_network_ngym(
                 trainData=trainData,
                 batchSize=net_params["batch_size"],
                 validBatch=validData[:, :, :],
-                learningRate=1e-2,
+                learningRate=1e-3,
                 newThresh=new_thresh,
-                monitorFreq=200,
+                monitorFreq=50,
                 trainOutputMask=trainOutputMask,
                 validOutputMask=validOutputMask,
                 validStopThres=net_params["accEarlyStop"],
@@ -99,53 +101,148 @@ def train_network_ngym(
 
     return net, net_params
 
-def main():
-    save_dir = "./log/"
-    setup_logger(save_dir)
-    # All supervised tasks:
-    tasks = (
-        # "ContextDecisionMaking-v0",
-        # 'DelayComparison-v0',
-        'DelayMatchCategory-v0',
-        # 'DelayMatchSample-v0',
-        # 'DelayMatchSampleDistractor1D-v0',
-        # 'DelayPairedAssociation-v0',
-        # 'DualDelayMatchSample-v0',
-        # 'GoNogo-v0',
-        # 'HierarchicalReasoning-v0',
-        # 'IntervalDiscrimination-v0',
-        # 'MotorTiming-v0',
-        # 'MultiSensoryIntegration-v0',
-        # 'OneTwoThreeGo-v0',
-        # 'PerceptualDecisionMaking-v0',
-        # 'PerceptualDecisionMakingDelayResponse-v0',
-        # 'ProbabilisticReasoning-v0',
-        # 'PulseDecisionMaking-v0',
-        # 'ReadySetGo-v0',
-        # 'SingleContextDecisionMaking-v0',
-    )
 
-    tasks_masks = {
-        # "ContextDecisionMaking-v0": "label",  # (no_fix too)
-        # 'DelayComparison-v0': 'label', # (no_fix too)
-        'DelayMatchCategory-v0': 'label', # (no_fix too)
-        # 'DelayMatchSample-v0': 'label', # (no_fix too)
-        # 'DelayMatchSampleDistractor1D-v0': 'no_fix',
-        # 'DelayPairedAssociation-v0': 'no_fix', # Long non-fixation period, could be improved
-        # 'DualDelayMatchSample-v0': 'label', # Always fixates, a bug?
-        # 'GoNogo-v0': 'no_fix', # (timing task, could improve)
-        # 'HierarchicalReasoning-v0': None,
-        # 'IntervalDiscrimination-v0': 'label', # (no_fix too)
-        # 'MotorTiming-v0': 'no_fix', # (timing task, could improve)
-        # 'MultiSensoryIntegration-v0': 'label', # (no_fix too)
-        # 'OneTwoThreeGo-v0': None,
-        # 'PerceptualDecisionMaking-v0': 'label', # (no_fix too)
-        # 'PerceptualDecisionMakingDelayResponse-v0': 'label', # (no_fix too)
-        # 'ProbabilisticReasoning-v0': 'label', # (no_fix too)
-        # 'PulseDecisionMaking-v0': 'label', # (no_fix too)
-        # 'ReadySetGo-v0': 'no_fix', # (timing task, could improve)
-        # 'SingleContextDecisionMaking-v0': 'label', # (no_fix too)
-    }
+c_vals = [
+    "firebrick",
+    "darkgreen",
+    "blue",
+    "darkorange",
+    "m",
+    "deeppink",
+    "r",
+    "gray",
+    "g",
+    "navy",
+    "y",
+    "purple",
+    "cyan",
+    "olive",
+    "skyblue",
+    "pink",
+    "tan",
+]
+
+# All supervised tasks:
+tasks = (
+    # "ContextDecisionMaking-v0",
+    # "DelayComparison-v0",
+    ## "DelayMatchCategory-v0",
+    "DelayMatchSample-v0",
+    "DelayMatchSampleDistractor1D-v0",
+    "DelayPairedAssociation-v0",
+    "DualDelayMatchSample-v0",
+    "GoNogo-v0",
+    ## "HierarchicalReasoning-v0",
+    "IntervalDiscrimination-v0",
+    "MotorTiming-v0",
+    "MultiSensoryIntegration-v0",
+    "OneTwoThreeGo-v0",
+    "PerceptualDecisionMaking-v0",
+    "PerceptualDecisionMakingDelayResponse-v0",
+    "ProbabilisticReasoning-v0",
+    ## "PulseDecisionMaking-v0",
+    "ReadySetGo-v0",
+    "SingleContextDecisionMaking-v0",
+)
+
+tasks_masks = {
+    "ContextDecisionMaking-v0": "label",  # (no_fix too)
+    "DelayComparison-v0": "label",  # (no_fix too)
+    "DelayMatchCategory-v0": "label",  # (no_fix too)
+    "DelayMatchSample-v0": "label",  # (no_fix too)
+    "DelayMatchSampleDistractor1D-v0": "no_fix",
+    "DelayPairedAssociation-v0": "no_fix",  # Long non-fixation period, could be improved
+    "DualDelayMatchSample-v0": "label",  # Always fixates, a bug?
+    "GoNogo-v0": "no_fix",  # (timing task, could improve)
+    "HierarchicalReasoning-v0": None,
+    "IntervalDiscrimination-v0": "label",  # (no_fix too)
+    "MotorTiming-v0": "no_fix",  # (timing task, could improve)
+    "MultiSensoryIntegration-v0": "label",  # (no_fix too)
+    "OneTwoThreeGo-v0": None,
+    "PerceptualDecisionMaking-v0": "label",  # (no_fix too)
+    "PerceptualDecisionMakingDelayResponse-v0": "label",  # (no_fix too)
+    "ProbabilisticReasoning-v0": "label",  # (no_fix too)
+    "PulseDecisionMaking-v0": "label",  # (no_fix too)
+    "ReadySetGo-v0": "no_fix",  # (timing task, could improve)
+    "SingleContextDecisionMaking-v0": "label",  # (no_fix too)
+}
+
+
+def plot_acc(load_types, tasks, accs, n_trials, task_names=None):
+
+    load_colors = (c_vals[5], c_vals[3])
+    load_idx_names = ("FreeNet", "GRU")
+    load_order = (
+        2,
+        1,
+    )  # Puts MPN first
+
+    fig1, ax1 = plt.subplots(1, 1, figsize=(10, 7))
+
+    for load_idx, _ in enumerate(load_types):
+        ax1.plot(
+            np.arange(len(tasks)),
+            np.mean(accs[load_idx], axis=-1),
+            color=load_colors[load_idx],
+            label=load_idx_names[load_idx],
+            marker=".",
+            zorder=load_order[load_idx],
+        )
+
+        for task_idx, task in enumerate(tasks):
+            ax1.scatter(
+                task_idx * np.ones((n_trials,)),
+                accs[load_idx, task_idx],
+                color=load_colors[load_idx],
+                marker=".",
+                zorder=-1,
+                alpha=0.3,
+                linewidth=0,
+            )
+
+    ax1.set_xticks(np.arange(len(tasks)))
+    ax1.set_xticklabels(task_names, rotation=45, fontsize=8, ha="right")
+
+    ax1.set_ylim((0.5, 1.0))
+    ax1.set_yticks((0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
+    ax1.set_yticklabels((0.5, None, None, None, None, 1.0))
+    ax1.set_ylabel("Accuracy")
+    ax1.legend()
+
+    for it in range(0, len(tasks), 2):
+        ax1.axvline(it, color="grey", alpha=0.2, zorder=-1)
+
+    jetplot.breathe(ax=ax1)
+    plt.tight_layout()
+    savefig("./figures", "ngym_accs", "png")
+
+
+import argparse
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--train", action="store_true", help="whether to train the network."
+    )
+    parser.add_argument(
+        "--save", action="store_true", help="whether to save the network."
+    )
+    parser.add_argument(
+        "--save_path", type=str, default="./saved_nets/", help="path to saved network."
+    )
+    parser.add_argument(
+        "--net_type", type=str, default="FreeNet", help="type of network."
+    )
+    args = parser.parse_args()
+
+    return args
+
+
+def main():
+    args = get_args()
+    save_dir = os.path.join("./log/", args.net_type)
+    setup_logger(save_dir)
 
     kwargs = {"dt": 100}
     seq_len = 100
@@ -171,23 +268,30 @@ def main():
         act_size = env.action_space.n
 
         logging.info("Task {}: {}".format(task_idx, task))
-        logging.info("  Observation size: {}, Action size: {}".format(ob_size, act_size))
+        logging.info(
+            "  Observation size: {}, Action size: {}".format(ob_size, act_size)
+        )
 
         datasets_params.append(dataset_params)
 
-    train = True
-    save = True
+    train = args.train
+    save = args.save
+    net_type = args.net_type
     # train = False
-    save = False
+    # save = False
     # # save_root = "./saved_nets/two_layer_output"
     # save_root = './saved_nets'
-    save_root = './saved_nets/softmax'
-    save_root = './saved_nets/single_layer_output'
+    save_root = "./saved_nets/softmax"
+    save_root = "./saved_nets/single_layer_output"
+    save_root = "./saved_nets/no_bias"
+    # save_root = "./saved_nets/HPN"
+    # save_root = "./saved_nets/GRU"
+    save_root = os.path.join(args.save_path, net_type)
 
     n_trials = 1
     acc_thresh = 0.99
     valid_early_stop = True
-    min_max_iter = (2000, 20000)
+    min_max_iter = (0, 10000)
     init_seed = 1003
     device = use_gpu()
     if train:
@@ -200,47 +304,47 @@ def main():
             ob_size = env.observation_space.shape[0]
             act_size = env.action_space.n
 
+            net_params = {
+                "netType": net_type,  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M, FreeNet, nnLSTM
+                "n_inputs": ob_size,  # input dim
+                "n_hidden": 100,  # hidden dim
+                "n_outputs": act_size,  # output dim
+                "f_act": "tanh",  # 1st layer actiivation function # linear, sigmoid, tanh, relu, softmax
+                "f0_act": "linear",  # 2nd layer actiivation function
+                "output_layer": "single",  # single | double
+                # STPN Features
+                "A_act": None,  # Activation on the A update (tanh or None)
+                "lam_type": "matrix",
+                "lam_clamp": 1,  # Maximum lambda value
+                "layer_bias": False,  # Use bias on the hidden layer
+                "eta_type": "matrix",  # scalar or vector
+                "eta_force": None,  # ensure either Hebbian or anti-Hebbian plasticity
+                "hebb_type": "inputOutput",  # input, output, inputOutput
+                "modulation_bounds": False,  # bound modulations
+                "mod_bound_val": 0.1,
+                "trainable_state0": False,  # Train the initial weights
+                "mp_type": "free",
+                # Train parameters
+                "train_mode": "seq_inf",  # 'seq' or 'seq_inf'
+                "weight_reg": "L1",
+                "reg_lambda": 1e-8,
+                "hidden_bias": False,
+                "ro_bias": True,  # use readout bias or not
+                "gradient_clip": 10,
+                "freeze_inputs": False,  # freeze the input layer (and hidden bias)
+                "sparsification": 0.0,  # Amount to sparsify network's weights (0.0 = no sparsification)
+                "noise_type": "input",  # None, 'input', 'hidden'
+                "noise_scale": 0.1,  # Expected magnitude of noise vector
+                "validEarlyStop": valid_early_stop,  # Early stop when average validation loss saturates
+                "accEarlyStop": acc_thresh,  # Accuracy to stop early at (None to ignore)
+                "minMaxIter": min_max_iter,  # (2000, 10000),  # Bounds on training time
+                "seed": init_seed,  # This seed is used to generate training/valid data too
+                "train_set_size": 3200,
+                "valid_set_size": 250,
+                "batch_size": 32,
+                "epochs": 40,
+            }
             for trial_idx in range(n_trials):
-                net_params = {
-                    "netType": "GRU",  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M, FreeNet
-                    "n_inputs": ob_size,  # input dim
-                    "n_hidden": 100,  # hidden dim
-                    "n_outputs": act_size,  # output dim
-                    "f_act": "softmax",  # 1st layer actiivation function # linear, sigmoid, tanh, relu, softmax
-                    "f0_act": "linear",  # 2nd layer actiivation function
-                    "output_layer": "single",  # single or double
-                    
-                    # STPN Features
-                    "A_act": None,  # Activation on the A update (tanh or None)
-                    "lam_type": "matrix",
-                    "lam_clamp": 1,  # Maximum lambda value
-                    "eta_type": "matrix",  # scalar or vector
-                    "eta_force": None,  # ensure either Hebbian or anti-Hebbian plasticity
-                    "hebb_type": "inputOutput",  # input, output, inputOutput
-                    "modulation_bounds": False,  # bound modulations
-                    "mod_bound_val": 0.1,
-                    "trainable_state0": False,  # Train the initial weights
-                    "mp_type": "free",
-                    # Train parameters
-                    "train_mode": "seq_inf",  # 'seq' or 'seq_inf'
-                    "weight_reg": "L1",
-                    "reg_lambda": 1e-4,
-                    "hidden_bias": True,
-                    "ro_bias": True,  # use readout bias or not
-                    "gradient_clip": 10,
-                    "freeze_inputs": False,  # freeze the input layer (and hidden bias)
-                    "sparsification": 0.0,  # Amount to sparsify network's weights (0.0 = no sparsification)
-                    "noise_type": "input",  # None, 'input', 'hidden'
-                    "noise_scale": 0.1,  # Expected magnitude of noise vector
-                    "validEarlyStop": valid_early_stop,  # Early stop when average validation loss saturates
-                    "accEarlyStop": acc_thresh,  # Accuracy to stop early at (None to ignore)
-                    "minMaxIter": min_max_iter,  # (2000, 10000),  # Bounds on training time
-                    "seed": init_seed,  # This seed is used to generate training/valid data too
-                    "train_set_size": 3200,
-                    "valid_set_size": 250,
-                    "batch_size": 32,
-                    "epochs": 40,
-                }
 
                 if dataset_params["convert_inputs"]:
                     net_params["n_inputs"] = dataset_params["input_dim"]
@@ -251,7 +355,7 @@ def main():
 
                 logging.info("Trial: {}".format(trial_idx))
                 verbose = True if trial_idx == 0 else False
-                _, net_params = train_network_ngym(
+                net, net_params = train_network_ngym(
                     net_params,
                     dataset_params,
                     save=save,
@@ -266,17 +370,14 @@ def main():
     ############
     # Evaluate!#
     ############
-    load_root_start = save_root
+    load_root_start = args.save_path
 
     # n_trials = 5 # For main text figure
     n_trials = 1  # For eta > 0 and eta < 0 figure
 
     load_types = [
-        "FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",  
-        # 'GRU[10,100,{}]_train=seq_inf_task={}_{}len',
-        # 'convert10_1factorsmall_HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len',
-        # 'convert10_1factor_GRU[10,100,{}]_train=seq_inf_task={}_{}len',
-        # 'convert10_1factor_VanillaRNN[10,100,{}]_train=seq_inf_task={}_{}len',
+        "FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "GRU[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
     test_set_size = 250
@@ -288,8 +389,6 @@ def main():
             n_trials,
         )
     )
-    # accs_pos_eta = [[[] for _ in range(len(tasks))] for _ in range(len(load_types))]
-    # accs_neg_eta = [[[] for _ in range(len(tasks))] for _ in range(len(load_types))]
 
     for task_idx, task in enumerate(tasks):
 
@@ -311,10 +410,11 @@ def main():
         act_size = env.action_space.n
 
         for load_idx, load_type in enumerate(load_types):
-
+            net_type = load_type.split("[")[0]
             for trial_idx in range(n_trials):
                 load_path = os.path.join(
                     load_root_start,
+                    net_type,
                     load_type.format(
                         act_size,
                         dataset_params["dataset_name"],
@@ -324,6 +424,7 @@ def main():
                 net_load, net_params_load, dataset_params_load = load_net(
                     load_path, init_seed + trial_idx, device=device
                 )
+                # net_load = net
                 net_load.to(device)
                 # Have to recreate the dataset in dataset_params_load since its not saved
                 kwargs = {"dt": dataset_params_load["dt"]}
@@ -336,33 +437,27 @@ def main():
 
                 if "convert_inputs" not in dataset_params_load:
                     dataset_params_load["convert_inputs"] = False
-
+                # breakpoint()
                 testData, testOutputMask, _ = convert_ngym_dataset(
                     dataset_params_load,
-                    set_size=net_params_load["valid_set_size"],
+                    set_size=1000,
                     device=device,
                     mask_type=tasks_masks[dataset_params_load["dataset_name"]],
                 )
 
+                # db_load has the following keys: ['x', 'h_tilde', 'h', 'Wxb', 'M', 'Mx', 'y_tilde', 'out', 'acc']
                 db_load = net_load.evaluate_debug(
                     testData[:, :, :], batchMask=testOutputMask
                 )
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
+                # plot_norm(db_load, testData[:], "./figures/sparseness", "norms")
 
-                # # Special eta signed accuracies
-                # if load_idx in (0, 1,): # MPN or MPNpre
-                #     eta = net_load.eta.detach().cpu().numpy()[0, 0, 0]
-                #     if eta > 0:
-                #         accs_pos_eta[load_idx][task_idx].append(db_load['acc'])
-                #     else:
-                #         accs_neg_eta[load_idx][task_idx].append(db_load['acc'])
+            # breakpoint()
+            logging.info(
+                "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
+            )
 
-            logging.info("  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1)))
-            # if load_idx in (0, 1,):
-            #     print('    Pos eta: {}, Neg eta: {}'.format(
-            #         len(accs_pos_eta[load_idx][task_idx]), len(accs_neg_eta[load_idx][task_idx]))
-            #     )
-
+    plot_acc(load_types, tasks, accs, n_trials, tasks)
 
 if __name__ == "__main__":
     main()
