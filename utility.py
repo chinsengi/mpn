@@ -79,6 +79,7 @@ def init_net(net_params, verbose=True, device="cpu"):
             stpType = "add"
         elif net_params["netType"] in ("FreeNet"):
             stpType = "free"
+            
         if net_params["netType"] in ("HebbNet", "HebbNet_M"):
             netClass = nets.HebbNet
         elif net_params["netType"] in ("rHebbNet", "rHebbNet_M"):

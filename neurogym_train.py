@@ -167,6 +167,9 @@ def get_args():
     parser.add_argument(
         "--param_type", type=str, default="matrix", help="type of lam and eta params."
     )
+    parser.add_argument(
+        "--freeze_inputs", action="store_true", help="whether to freeze the input weights."
+    )
     args = parser.parse_args()
 
     return args
@@ -264,7 +267,7 @@ def main():
                 "hidden_bias": False,
                 "ro_bias": True,  # use readout bias or not
                 "gradient_clip": 10,
-                "freeze_inputs": False,  # freeze the input layer (and hidden bias)
+                "freeze_inputs": args.freeze_inputs,  # freeze the input layer (and hidden bias)
                 "sparsification": 0.0,  # Amount to sparsify network's weights (0.0 = no sparsification)
                 "noise_type": "input",  # None, 'input', 'hidden'
                 "noise_scale": 0.1,  # Expected magnitude of noise vector
@@ -311,9 +314,11 @@ def main():
     load_types = [
         "/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
         "scalar/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         "scalar/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         "matrix/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
     test_set_size = 250
@@ -347,14 +352,14 @@ def main():
 
         for load_idx, load_type in enumerate(load_types):
             param_type = load_type.split("/")[0]
-            load_type = load_type.split("/")[1]
-            net_type = load_type.split("[")[0]
+            filename = load_type.split("/")[1]
+            net_type = filename.split("[")[0]
             for trial_idx in range(n_trials):
                 load_path = os.path.join(
                     load_root_start,
                     param_type,
                     net_type,
-                    load_type.format(
+                    filename.format(
                         act_size,
                         dataset_params["dataset_name"],
                         dataset_params["seq_length"],
@@ -396,7 +401,7 @@ def main():
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
 
-    plot_acc(load_types, tasks, accs, n_trials, tasks)
+    plot_acc(load_types, tasks, accs, n_trials)
 
 if __name__ == "__main__":
     main()
