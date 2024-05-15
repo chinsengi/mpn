@@ -475,6 +475,10 @@ class FreeNet(StatefulBase):
 
         # Determines if readout bias is trainable or simply not used (easier interpretting readouts in the latter)
         self.roBias = mpnArgs.pop("roBias", True)
+        if self.roBias:
+            init_string += "Readout bias: trainable // "
+        else:
+            init_string += "No readout bias // "
         self.outputLayer = mpnArgs.pop("outputLayer", "double")
         if self.outputLayer == "single":
             init_string += "Single output layer // "
