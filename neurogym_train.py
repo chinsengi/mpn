@@ -101,48 +101,27 @@ def train_network_ngym(
 
     return net, net_params
 
-
-c_vals = [
-    "firebrick",
-    "darkgreen",
-    "blue",
-    "darkorange",
-    "m",
-    "deeppink",
-    "r",
-    "gray",
-    "g",
-    "navy",
-    "y",
-    "purple",
-    "cyan",
-    "olive",
-    "skyblue",
-    "pink",
-    "tan",
-]
-
 # All supervised tasks:
 tasks = (
-    # "ContextDecisionMaking-v0",
+    "ContextDecisionMaking-v0",
     # "DelayComparison-v0",
-    ## "DelayMatchCategory-v0",
-    "DelayMatchSample-v0",
-    "DelayMatchSampleDistractor1D-v0",
-    "DelayPairedAssociation-v0",
-    "DualDelayMatchSample-v0",
-    "GoNogo-v0",
-    ## "HierarchicalReasoning-v0",
-    "IntervalDiscrimination-v0",
-    "MotorTiming-v0",
-    "MultiSensoryIntegration-v0",
-    "OneTwoThreeGo-v0",
-    "PerceptualDecisionMaking-v0",
-    "PerceptualDecisionMakingDelayResponse-v0",
-    "ProbabilisticReasoning-v0",
-    ## "PulseDecisionMaking-v0",
-    "ReadySetGo-v0",
-    "SingleContextDecisionMaking-v0",
+    # ## "DelayMatchCategory-v0",
+    # "DelayMatchSample-v0",
+    # "DelayMatchSampleDistractor1D-v0",
+    # "DelayPairedAssociation-v0",
+    # "DualDelayMatchSample-v0",
+    # "GoNogo-v0",
+    # ## "HierarchicalReasoning-v0",
+    # "IntervalDiscrimination-v0",
+    # "MotorTiming-v0",
+    # "MultiSensoryIntegration-v0",
+    # "OneTwoThreeGo-v0",
+    # "PerceptualDecisionMaking-v0",
+    # "PerceptualDecisionMakingDelayResponse-v0",
+    # "ProbabilisticReasoning-v0",
+    # ## "PulseDecisionMaking-v0",
+    # "ReadySetGo-v0",
+    # "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -168,55 +147,6 @@ tasks_masks = {
 }
 
 
-def plot_acc(load_types, tasks, accs, n_trials, task_names=None):
-
-    load_colors = (c_vals[5], c_vals[3])
-    load_idx_names = ("FreeNet", "GRU")
-    load_order = (
-        2,
-        1,
-    )  # Puts MPN first
-
-    fig1, ax1 = plt.subplots(1, 1, figsize=(10, 7))
-
-    for load_idx, _ in enumerate(load_types):
-        ax1.plot(
-            np.arange(len(tasks)),
-            np.mean(accs[load_idx], axis=-1),
-            color=load_colors[load_idx],
-            label=load_idx_names[load_idx],
-            marker=".",
-            zorder=load_order[load_idx],
-        )
-
-        for task_idx, task in enumerate(tasks):
-            ax1.scatter(
-                task_idx * np.ones((n_trials,)),
-                accs[load_idx, task_idx],
-                color=load_colors[load_idx],
-                marker=".",
-                zorder=-1,
-                alpha=0.3,
-                linewidth=0,
-            )
-
-    ax1.set_xticks(np.arange(len(tasks)))
-    ax1.set_xticklabels(task_names, rotation=45, fontsize=8, ha="right")
-
-    ax1.set_ylim((0.5, 1.0))
-    ax1.set_yticks((0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
-    ax1.set_yticklabels((0.5, None, None, None, None, 1.0))
-    ax1.set_ylabel("Accuracy")
-    ax1.legend()
-
-    for it in range(0, len(tasks), 2):
-        ax1.axvline(it, color="grey", alpha=0.2, zorder=-1)
-
-    jetplot.breathe(ax=ax1)
-    plt.tight_layout()
-    savefig("./figures", "ngym_accs", "png")
-
-
 import argparse
 
 
@@ -234,6 +164,12 @@ def get_args():
     parser.add_argument(
         "--net_type", type=str, default="FreeNet", help="type of network."
     )
+    parser.add_argument(
+        "--param_type", type=str, default="matrix", help="type of lam and eta params."
+    )
+    parser.add_argument(
+        "--freeze_inputs", action="store_true", help="whether to freeze the input weights."
+    )
     args = parser.parse_args()
 
     return args
@@ -241,7 +177,7 @@ def get_args():
 
 def main():
     args = get_args()
-    save_dir = os.path.join("./log/", args.net_type)
+    save_dir = os.path.join("./log/", args.net_type, args.param_type)
     setup_logger(save_dir)
 
     kwargs = {"dt": 100}
@@ -286,7 +222,7 @@ def main():
     save_root = "./saved_nets/no_bias"
     # save_root = "./saved_nets/HPN"
     # save_root = "./saved_nets/GRU"
-    save_root = os.path.join(args.save_path, net_type)
+    save_root = os.path.join(args.save_path, args.param_type, net_type)
 
     n_trials = 1
     acc_thresh = 0.99
@@ -314,10 +250,10 @@ def main():
                 "output_layer": "single",  # single | double
                 # STPN Features
                 "A_act": None,  # Activation on the A update (tanh or None)
-                "lam_type": "matrix",
+                "lam_type": args.param_type,  # scalar or matrix
                 "lam_clamp": 1,  # Maximum lambda value
                 "layer_bias": False,  # Use bias on the hidden layer
-                "eta_type": "matrix",  # scalar or vector
+                "eta_type": args.param_type,  # scalar or vector
                 "eta_force": None,  # ensure either Hebbian or anti-Hebbian plasticity
                 "hebb_type": "inputOutput",  # input, output, inputOutput
                 "modulation_bounds": False,  # bound modulations
@@ -331,7 +267,7 @@ def main():
                 "hidden_bias": False,
                 "ro_bias": True,  # use readout bias or not
                 "gradient_clip": 10,
-                "freeze_inputs": False,  # freeze the input layer (and hidden bias)
+                "freeze_inputs": args.freeze_inputs,  # freeze the input layer (and hidden bias)
                 "sparsification": 0.0,  # Amount to sparsify network's weights (0.0 = no sparsification)
                 "noise_type": "input",  # None, 'input', 'hidden'
                 "noise_scale": 0.1,  # Expected magnitude of noise vector
@@ -376,8 +312,13 @@ def main():
     n_trials = 1  # For eta > 0 and eta < 0 figure
 
     load_types = [
-        "FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "GRU[10,100,{}]_train=seq_inf_task={}_{}len",
+        "/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
     test_set_size = 250
@@ -410,12 +351,15 @@ def main():
         act_size = env.action_space.n
 
         for load_idx, load_type in enumerate(load_types):
-            net_type = load_type.split("[")[0]
+            param_type = load_type.split("/")[0]
+            filename = load_type.split("/")[1]
+            net_type = filename.split("[")[0]
             for trial_idx in range(n_trials):
                 load_path = os.path.join(
                     load_root_start,
+                    param_type,
                     net_type,
-                    load_type.format(
+                    filename.format(
                         act_size,
                         dataset_params["dataset_name"],
                         dataset_params["seq_length"],
@@ -450,14 +394,14 @@ def main():
                     testData[:, :, :], batchMask=testOutputMask
                 )
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
-                # plot_norm(db_load, testData[:], "./figures/sparseness", "norms")
+                # plot_norm(net_type, db_load, testData[:], "./figures/sparseness", "norms")
 
             # breakpoint()
             logging.info(
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
 
-    plot_acc(load_types, tasks, accs, n_trials, tasks)
+    plot_acc(load_types, tasks, accs, n_trials)
 
 if __name__ == "__main__":
     main()
