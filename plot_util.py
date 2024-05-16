@@ -58,6 +58,8 @@ def plot_acc(load_types, tasks, accs, n_trials):
             freeze_type = "freeze"
             param_type = load_type.split("/")[1]
             net_type = load_type.split("/")[2]
+        if net_type == "HebbNet_M":
+            net_type = "MPN"
         load_idx_names.append(f"{net_type} {param_type} {freeze_type}")
         
     # load_order = (
@@ -65,28 +67,16 @@ def plot_acc(load_types, tasks, accs, n_trials):
     #     1,
     # )  # Puts MPN first
 
-    fig1, ax1 = plt.subplots(1, 1, figsize=(10, 7))
+    fig1, ax1 = plt.subplots(1, 1, figsize=(12,8))
 
+    bar_width = 0.25
     for load_idx, _ in enumerate(load_types):
-        ax1.plot(
-            np.arange(len(tasks)),
+        ax1.bar(
+            np.arange(len(tasks)) + bar_width * load_idx,
             np.mean(accs[load_idx], axis=-1),
             color=c_vals[load_idx],
             label=load_idx_names[load_idx],
-            marker=".",
-            # zorder=load_order[load_idx],
         )
-
-        for task_idx, task in enumerate(tasks):
-            ax1.scatter(
-                task_idx * np.ones((n_trials,)),
-                accs[load_idx, task_idx],
-                color=c_vals[load_idx],
-                marker=".",
-                zorder=-1,
-                alpha=0.3,
-                linewidth=0,
-            )
 
     ax1.set_xticks(np.arange(len(tasks)))
     ax1.set_xticklabels(task_names, rotation=45, fontsize=8, ha="right")

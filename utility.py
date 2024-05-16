@@ -114,6 +114,7 @@ def init_net(net_params, verbose=True, device="cpu"):
             verbose=verbose,
             batch_size=net_params["batch_size"],
             outputLayer=net_params["output_layer"],
+            winpRank = net_params.get("winp_rank", -1),
             device=device,
         )
 

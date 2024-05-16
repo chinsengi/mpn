@@ -105,25 +105,25 @@ def train_network_ngym(
 
 # All supervised tasks:
 tasks = (
-    "ContextDecisionMaking-v0",
-    "DelayComparison-v0",
-    ## "DelayMatchCategory-v0",
-    "DelayMatchSample-v0",
-    "DelayMatchSampleDistractor1D-v0",
-    "DelayPairedAssociation-v0",
-    "DualDelayMatchSample-v0",
-    "GoNogo-v0",
-    ## "HierarchicalReasoning-v0",
-    "IntervalDiscrimination-v0",
-    "MotorTiming-v0",
-    "MultiSensoryIntegration-v0",
-    "OneTwoThreeGo-v0",
-    "PerceptualDecisionMaking-v0",
-    "PerceptualDecisionMakingDelayResponse-v0",
+    # "ContextDecisionMaking-v0",
+    # "DelayComparison-v0",
+    # ## "DelayMatchCategory-v0",
+    # "DelayMatchSample-v0",
+    # "DelayMatchSampleDistractor1D-v0",
+    # "DelayPairedAssociation-v0",
+    # "DualDelayMatchSample-v0",
+    # "GoNogo-v0",
+    # ## "HierarchicalReasoning-v0",
+    # "IntervalDiscrimination-v0",
+    # "MotorTiming-v0",
+    # "MultiSensoryIntegration-v0",
+    # "OneTwoThreeGo-v0",
+    # "PerceptualDecisionMaking-v0",
+    # "PerceptualDecisionMakingDelayResponse-v0",
     "ProbabilisticReasoning-v0",
-    ## "PulseDecisionMaking-v0",
-    "ReadySetGo-v0",
-    "SingleContextDecisionMaking-v0",
+    # ## "PulseDecisionMaking-v0",
+    # "ReadySetGo-v0",
+    # "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -224,15 +224,6 @@ def main():
     train = args.train
     save = args.save
     net_type = args.net_type
-    # train = False
-    # save = False
-    # # save_root = "./saved_nets/two_layer_output"
-    # save_root = './saved_nets'
-    save_root = "./saved_nets/softmax"
-    save_root = "./saved_nets/single_layer_output"
-    save_root = "./saved_nets/no_bias"
-    # save_root = "./saved_nets/HPN"
-    # save_root = "./saved_nets/GRU"
     if not args.freeze_inputs:
         save_root = os.path.join(args.save_path, args.param_type, net_type)
     else:
@@ -274,6 +265,7 @@ def main():
                 "mod_bound_val": 0.1,
                 "trainable_state0": False,  # Train the initial weights
                 "mp_type": "free",
+                "winp_rank": args.rank,
                 # Train parameters
                 "train_mode": "seq_inf",  # 'seq' or 'seq_inf'
                 "weight_reg": "L1",
@@ -331,12 +323,12 @@ def main():
     load_types = [
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "freeze/scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "freeze/scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
     test_set_size = 250
