@@ -151,5 +151,6 @@ def plot_pattern_gif(net_type, db, batch, save_dir, save_name):
     ani = FuncAnimation(fig, update, frames=range(T), repeat=False, interval=100)
     create_dir(save_dir)
     ani.save(f"{save_dir}/{save_name}.gif", writer="imagemagick", fps=3)
+    logging.info(f"Saved gif to {save_dir}/{save_name}.gif")
     # plt.scatter(patterns_pca[:, 0], patterns_pca[:, 1], c=cluster.flatten(), cmap="viridis")
     # savefig(save_dir, save_name, "png")

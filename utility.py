@@ -506,3 +506,4 @@ def savefig(path="./image", filename="image", format="png", include_timestamp=Tr
         dpi=300,
         format=format,
     )
+    logging.info(f"Saving figure to {os.path.join(path, current_time + filename + '.' + format)}")
