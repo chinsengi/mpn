@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import jetplot
 from plot_util import *
 
+
 def train_network_ngym(
     net_params,
     dataset_params,
@@ -76,7 +77,7 @@ def train_network_ngym(
                 trainData=trainData,
                 batchSize=net_params["batch_size"],
                 validBatch=validData[:, :, :],
-                learningRate=1e-3,
+                learningRate=net_params["learning_rate"],
                 newThresh=new_thresh,
                 monitorFreq=50,
                 trainOutputMask=trainOutputMask,
@@ -101,27 +102,28 @@ def train_network_ngym(
 
     return net, net_params
 
+
 # All supervised tasks:
 tasks = (
-    "ContextDecisionMaking-v0",
+    # "ContextDecisionMaking-v0",
     "DelayComparison-v0",
-    ## "DelayMatchCategory-v0",
-    "DelayMatchSample-v0",
-    "DelayMatchSampleDistractor1D-v0",
-    "DelayPairedAssociation-v0",
-    "DualDelayMatchSample-v0",
-    "GoNogo-v0",
-    ## "HierarchicalReasoning-v0",
-    "IntervalDiscrimination-v0",
-    "MotorTiming-v0",
-    "MultiSensoryIntegration-v0",
-    "OneTwoThreeGo-v0",
-    "PerceptualDecisionMaking-v0",
-    "PerceptualDecisionMakingDelayResponse-v0",
-    "ProbabilisticReasoning-v0",
-    ## "PulseDecisionMaking-v0",
-    "ReadySetGo-v0",
-    "SingleContextDecisionMaking-v0",
+    # ## "DelayMatchCategory-v0",
+    # "DelayMatchSample-v0",
+    # "DelayMatchSampleDistractor1D-v0",
+    # "DelayPairedAssociation-v0",
+    # "DualDelayMatchSample-v0",
+    # "GoNogo-v0",
+    # ## "HierarchicalReasoning-v0",
+    # "IntervalDiscrimination-v0",
+    # "MotorTiming-v0",
+    # "MultiSensoryIntegration-v0",
+    # "OneTwoThreeGo-v0",
+    # "PerceptualDecisionMaking-v0",
+    # "PerceptualDecisionMakingDelayResponse-v0",
+    # "ProbabilisticReasoning-v0",
+    # ## "PulseDecisionMaking-v0",
+    # "ReadySetGo-v0",
+    # "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -168,8 +170,19 @@ def get_args():
         "--param_type", type=str, default="matrix", help="type of lam and eta params."
     )
     parser.add_argument(
-        "--freeze_inputs", action="store_true", help="whether to freeze the input weights."
+        "--freeze_inputs",
+        action="store_true",
+        help="whether to freeze the input weights.",
     )
+    parser.add_argument(
+        "--skip_eval", action="store_true", help="whether to skip evaluation."
+    )
+    parser.add_argument(
+        "--disable_early_stop", action="store_true", help="whether to early stop."
+    )
+    parser.add_argument("--lr", type=float, default=1e-3, help="learning rate.")
+    parser.add_argument("--rank", type=int, default=1, help="rank of the weight matrix in MPN.")
+    parser.add_argument("--hebb_type", type=str, default="inputOutput", help="type of Hebbian plasticity.")
     args = parser.parse_args()
 
     return args
@@ -213,20 +226,14 @@ def main():
     train = args.train
     save = args.save
     net_type = args.net_type
-    # train = False
-    # save = False
-    # # save_root = "./saved_nets/two_layer_output"
-    # save_root = './saved_nets'
-    save_root = "./saved_nets/softmax"
-    save_root = "./saved_nets/single_layer_output"
-    save_root = "./saved_nets/no_bias"
-    # save_root = "./saved_nets/HPN"
-    # save_root = "./saved_nets/GRU"
-    save_root = os.path.join(args.save_path, args.param_type, net_type)
+    if not args.freeze_inputs:
+        save_root = os.path.join(args.save_path, args.hebb_type, args.param_type, net_type)
+    else:
+        save_root = os.path.join(args.save_path, "freeze", args.hebb_type, args.param_type, net_type)
 
     n_trials = 1
     acc_thresh = 0.99
-    valid_early_stop = True
+    valid_early_stop = not args.disable_early_stop
     min_max_iter = (0, 10000)
     init_seed = 1003
     device = use_gpu()
@@ -255,15 +262,17 @@ def main():
                 "layer_bias": False,  # Use bias on the hidden layer
                 "eta_type": args.param_type,  # scalar or vector
                 "eta_force": None,  # ensure either Hebbian or anti-Hebbian plasticity
-                "hebb_type": "inputOutput",  # input, output, inputOutput
+                "hebb_type": args.hebb_type,  # input, output, inputOutput
                 "modulation_bounds": False,  # bound modulations
                 "mod_bound_val": 0.1,
                 "trainable_state0": False,  # Train the initial weights
                 "mp_type": "free",
+                "winp_rank": args.rank,
                 # Train parameters
                 "train_mode": "seq_inf",  # 'seq' or 'seq_inf'
                 "weight_reg": "L1",
                 "reg_lambda": 1e-8,
+                "learning_rate": args.lr,
                 "hidden_bias": False,
                 "ro_bias": True,  # use readout bias or not
                 "gradient_clip": 10,
@@ -306,19 +315,22 @@ def main():
     ############
     # Evaluate!#
     ############
+    if args.skip_eval or train:
+        return
     load_root_start = args.save_path
 
     # n_trials = 5 # For main text figure
     n_trials = 1  # For eta > 0 and eta < 0 figure
 
     load_types = [
-        "/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "freeze/scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
     test_set_size = 250
@@ -351,15 +363,10 @@ def main():
         act_size = env.action_space.n
 
         for load_idx, load_type in enumerate(load_types):
-            param_type = load_type.split("/")[0]
-            filename = load_type.split("/")[1]
-            net_type = filename.split("[")[0]
             for trial_idx in range(n_trials):
                 load_path = os.path.join(
                     load_root_start,
-                    param_type,
-                    net_type,
-                    filename.format(
+                    load_type.format(
                         act_size,
                         dataset_params["dataset_name"],
                         dataset_params["seq_length"],
@@ -394,7 +401,9 @@ def main():
                     testData[:, :, :], batchMask=testOutputMask
                 )
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
-                plot_norm(net_type, db_load, testData[:], "./figures/sparseness", "norms")
+                # plot_norm(
+                #     net_type, db_load, testData[:], "./figures/sparseness", "norms"
+                # )
 
             # breakpoint()
             logging.info(
@@ -402,6 +411,7 @@ def main():
             )
 
     plot_acc(load_types, tasks, accs, n_trials)
+
 
 if __name__ == "__main__":
     main()

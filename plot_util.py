@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import torch
 from utility import *
 from sklearn.decomposition import PCA
 
@@ -26,13 +25,11 @@ c_vals = [
 task_names = (
     'Context DM',
     'Delay Comparison',
-    # 'Delay Match Category', # No diff from FF
     'Delay Match Sample',
     'Delay Match Sample Dist.',
     'Delay Paired Association',
     'Dual Delay Match Sample',
     'Go No-go',
-    # 'Hierarchical Reasoning', # RL task
     'Interval Discrimination',
     'Motor Timing',
     'Multi-Sensory Integration',
@@ -40,49 +37,48 @@ task_names = (
     'Perceptual DM',
     'Perc. DM Delay Response',
     'Probabilistic Reasoning',
-    # 'Pulse DM', # No diff from FF
-    # 'ReachingDelayResponse-v0', # Different type of input
     'Ready-Set-Go',
     'Single Context DM',
 )
 
 def plot_acc(load_types, tasks, accs, n_trials):
-
+    plt.rcParams['font.family'] = 'DejaVu Sans'
     # load_colors = (c_vals[5], c_vals[3])
     load_idx_names = []
     for load_type in load_types:
         param_type = load_type.split("/")[0]
-        filename = load_type.split("/")[1]
-        net_type = filename.split("[")[0]
-        load_idx_names.append(f"{net_type} {param_type}")
+        freeze_type = ""
+        if param_type in ("scalar", "matrix"):
+            net_type = load_type.split("/")[1]
+        elif param_type == "GRU":
+            param_type = ""
+            net_type = "GRU"
+        else:
+            freeze_type = "freeze"
+            param_type = load_type.split("/")[1]
+            net_type = load_type.split("/")[2]
+        if net_type == "HebbNet_M":
+            net_type = "MPN"
+        if net_type == "FreeNet":
+            net_type = "HPN"
+        load_idx_names.append(f"{net_type} {param_type} {freeze_type}")
         
     # load_order = (
     #     2,
     #     1,
     # )  # Puts MPN first
 
-    fig1, ax1 = plt.subplots(1, 1, figsize=(10, 7))
+    fig1, ax1 = plt.subplots(1, 1, figsize=(12,8))
 
+    bar_width = 0.25
     for load_idx, _ in enumerate(load_types):
-        ax1.plot(
-            np.arange(len(tasks)),
+        ax1.bar(
+            np.arange(len(tasks)) + bar_width * (load_idx-1),
             np.mean(accs[load_idx], axis=-1),
+            bar_width,
             color=c_vals[load_idx],
             label=load_idx_names[load_idx],
-            marker=".",
-            # zorder=load_order[load_idx],
         )
-
-        for task_idx, task in enumerate(tasks):
-            ax1.scatter(
-                task_idx * np.ones((n_trials,)),
-                accs[load_idx, task_idx],
-                color=c_vals[load_idx],
-                marker=".",
-                zorder=-1,
-                alpha=0.3,
-                linewidth=0,
-            )
 
     ax1.set_xticks(np.arange(len(tasks)))
     ax1.set_xticklabels(task_names, rotation=45, fontsize=8, ha="right")

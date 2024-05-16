@@ -84,8 +84,8 @@ class FreeLayer(nn.Module):
             init_string += "\n  "
 
         # Determines whether or not layer weights are trainable parameters
-        self.freezeLayer = mpnArgs.get("freezeInputs", False)
-        if self.freezeLayer:  # Does not train input layer
+        self.freezeInputs = mpnArgs.get("freezeInputs", False)
+        if self.freezeInputs:  # Does not train input layer
             init_string += "W: Frozen // "
             self.register_buffer("w1", torch.tensor(W[0], dtype=torch.float))
         else:
@@ -93,10 +93,10 @@ class FreeLayer(nn.Module):
 
         # Determines if layer bias is present and trainable (can overwhelm noise during delay).
         self.layerBias = mpnArgs.get("layerBias", True)
-        if self.layerBias and not self.freezeLayer:
+        if self.layerBias and not self.freezeInputs:
             init_string += "Layer bias: trainable // "
             self.b1 = nn.Parameter(torch.tensor(b[0], dtype=torch.float))
-        elif self.layerBias and self.freezeLayer:
+        elif self.layerBias and self.freezeInputs:
             init_string += "Layer bias: frozen // "
             self.register_buffer("b1", torch.tensor(b[0], dtype=torch.float))
         else:  # No hidden bias
@@ -285,13 +285,14 @@ class FreeLayer(nn.Module):
             )  # eta = exp(_eta)
             self.eta = torch.exp(self._eta)
         else:  # Unconstrained eta
-            self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float), requires_grad=not self.freezeLayer)
+            self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float), requires_grad=not self.freezeInputs)
             # self.register_buffer('_eta', torch.tensor(-1.0, dtype=torch.float)) # Anti-hebbian
             # self.register_buffer("_eta", torch.tensor(1.0, dtype=torch.float))
             self.eta = self._eta.data   
 
         # Setting lambda parameter
-        self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float), requires_grad=not self.freezeLayer)
+        self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float), requires_grad=not self.freezeInputs)
+        # self._lam = nn.Parameter(torch.ones_like(torch.tensor(lam, dtype=torch.float)), requires_grad=False)
         self.lam = self._lam.data
 
     def update_sm_matrix(self, pre, post, stateOnly=False):
@@ -376,36 +377,9 @@ class FreeLayer(nn.Module):
             )
 
         if self.sparsification == 0.0:
-            if self.mpType == "add":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1), self.w1 + self.M, x.unsqueeze(2)
-                )
-            elif self.mpType == "mult":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1),
-                    self.w1 * (self.M + torch.ones_like(self.M)),
-                    x.unsqueeze(2),
-                )
-            elif self.mpType == "free":
-                y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
-            else:
-                raise NotImplementedError
-                # y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.w1*self.M, x.unsqueeze(2))
+            y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
         else:  # Applies masking of weights to sparsify network
-            if self.mpType == "add":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1),
-                    self.w1Mask * (self.w1 + self.M),
-                    x.unsqueeze(2),
-                )
-            elif self.mpType == "mult":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1),
-                    self.w1Mask * self.w1 * (self.M + torch.ones_like(self.M)),
-                    x.unsqueeze(2),
-                )
-            else:
-                raise NotImplementedError
+            raise NotImplementedError
 
         # Adds noise to the preactivations
         if self.noiseType in ("layer",):

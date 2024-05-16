@@ -79,9 +79,12 @@ class HebbNet(StatefulBase):
         self.freezeInputs = hebbArgs.pop("freezeInputs", False)
         if self.freezeInputs:  # Does not train input layer
             init_string += "\n  Winp: Frozen // "
-            self.register_buffer("w1", torch.tensor(W[0], dtype=torch.float))
+            if self.stpType == "mult":
+                self.register_buffer("w1", torch.ones_like(torch.tensor(W[0], dtype=torch.float)))
+            else:
+                self.register_buffer("w1", torch.tensor(W[0], dtype=torch.float))
         else:
-            init_string += "\n  "
+            init_string += "\n  Winp: trainable // "
             self.w1 = nn.Parameter(torch.tensor(W[0], dtype=torch.float))
         # Readout layer (always trainable)
         self.w2 = nn.Parameter(torch.tensor(W[1], dtype=torch.float))
@@ -189,9 +192,9 @@ class HebbNet(StatefulBase):
             init_string += "\n    A0: trainable"
             self.A0 = nn.Parameter(torch.tensor(W2[0], dtype=torch.float))
         else:
-            init_string += "\n    A0: zeros"
+            init_string += "\n    A0: random"
             self.register_buffer(
-                "A0", torch.zeros_like(torch.tensor(W2[0], dtype=torch.float))
+                "A0", torch.tensor(W2[0], dtype=torch.float)
             )
 
         if self.verbose:  # Full summary of network parameters
@@ -291,29 +294,30 @@ class HebbNet(StatefulBase):
             )  # eta = exp(_eta)
             self.eta = torch.exp(self._eta)
         else:  # Unconstrained eta
-            if self.freezeInputs:
-                if self.etaType != "scalar":
-                    raise NotImplementedError(
-                        "Still need to set defaults for non-scalar eta"
-                    )
-                # self.register_buffer('_eta', torch.tensor(-1.0, dtype=torch.float)) # Anti-hebbian
-                self.register_buffer("_eta", torch.tensor(1.0, dtype=torch.float))
-                self.eta = self._eta
-            else:
-                self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float))
-                self.eta = self._eta.data
+            # if self.freezeInputs:
+            #     if self.etaType != "scalar":
+            #         raise NotImplementedError(
+            #             "Still need to set defaults for non-scalar eta"
+            #         )
+            #     # self.register_buffer('_eta', torch.tensor(-1.0, dtype=torch.float)) # Anti-hebbian
+            #     self.register_buffer("_eta", torch.tensor(1.0, dtype=torch.float))
+            #     self.eta = self._eta
+            # else:
+            self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float))
+            self.eta = self._eta.data
 
         # Setting lambda parameter
-        if self.freezeInputs:
-            if self.lamType != "scalar":
-                raise NotImplementedError(
-                    "Still need to set defaults for non-scalar lambda"
-                )
-            self.register_buffer("_lam", torch.tensor(self.lamClamp))
-            self.lam = self._lam
-        else:
-            self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float))
-            self.lam = self._lam.data
+        # if self.freezeInputs:
+        #     if self.lamType != "scalar":
+        #         raise NotImplementedError(
+        #             "Still need to set defaults for non-scalar lambda"
+        #         )
+        #     self.register_buffer("_lam", torch.tensor(self.lamClamp))
+        #     self.lam = self._lam
+        # else:
+        self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float))
+        # self._lam = nn.Parameter(torch.ones_like(torch.tensor(lam, dtype=torch.float)), requires_grad=False)
+        self.lam = self._lam.data
 
     def update_hebb(self, pre, post, isFam=False, stateOnly=False):
         # if self.reparamLam:
@@ -2109,7 +2113,7 @@ class VanillaRNN(StatefulBase):
         self.freezeInputs = rnnArgs.pop("freezeInputs", False)
         if (
             self.freezeInputs
-        ):  # Does not train input layer or hidden bias (just sets thte latter to zero)
+        ):  # Does not train input layer or hidden bias (just sets the latter to zero)
             init_string += "\n  Winp: Frozen //  "
             self.register_buffer("w1", torch.tensor(W[0], dtype=torch.float))
             self.register_buffer("wr", torch.tensor(W[1], dtype=torch.float))
