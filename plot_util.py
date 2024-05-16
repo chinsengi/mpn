@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import torch
 from utility import *
 from sklearn.decomposition import PCA
 

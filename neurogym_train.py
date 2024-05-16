@@ -106,7 +106,7 @@ def train_network_ngym(
 # All supervised tasks:
 tasks = (
     # "ContextDecisionMaking-v0",
-    # "DelayComparison-v0",
+    "DelayComparison-v0",
     # ## "DelayMatchCategory-v0",
     # "DelayMatchSample-v0",
     # "DelayMatchSampleDistractor1D-v0",
@@ -120,7 +120,7 @@ tasks = (
     # "OneTwoThreeGo-v0",
     # "PerceptualDecisionMaking-v0",
     # "PerceptualDecisionMakingDelayResponse-v0",
-    "ProbabilisticReasoning-v0",
+    # "ProbabilisticReasoning-v0",
     # ## "PulseDecisionMaking-v0",
     # "ReadySetGo-v0",
     # "SingleContextDecisionMaking-v0",
@@ -182,6 +182,7 @@ def get_args():
     )
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate.")
     parser.add_argument("--rank", type=int, default=1, help="rank of the weight matrix in MPN.")
+    parser.add_argument("--hebb_type", type=str, default="inputOutput", help="type of Hebbian plasticity.")
     args = parser.parse_args()
 
     return args
@@ -226,9 +227,9 @@ def main():
     save = args.save
     net_type = args.net_type
     if not args.freeze_inputs:
-        save_root = os.path.join(args.save_path, args.param_type, net_type)
+        save_root = os.path.join(args.save_path, args.hebb_type, args.param_type, net_type)
     else:
-        save_root = os.path.join(args.save_path, "freeze", args.param_type, net_type)
+        save_root = os.path.join(args.save_path, "freeze", args.hebb_type, args.param_type, net_type)
 
     n_trials = 1
     acc_thresh = 0.99
@@ -261,7 +262,7 @@ def main():
                 "layer_bias": False,  # Use bias on the hidden layer
                 "eta_type": args.param_type,  # scalar or vector
                 "eta_force": None,  # ensure either Hebbian or anti-Hebbian plasticity
-                "hebb_type": "inputOutput",  # input, output, inputOutput
+                "hebb_type": args.hebb_type,  # input, output, inputOutput
                 "modulation_bounds": False,  # bound modulations
                 "mod_bound_val": 0.1,
                 "trainable_state0": False,  # Train the initial weights
