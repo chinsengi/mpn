@@ -512,10 +512,19 @@ class NetworkBase(nn.Module):
 
                 kList = k.split(".")
                 localParam = getattr(self, kList[0])
+                exist_param = True
                 for k in kList[1:]:
+                    if not hasattr(localParam, k):
+                        logging.warning(
+                            "WARNING: local {} does not have attribute {}. Skipping...".format(
+                                kList[0], k
+                            )
+                        )
+                        exist_param = False
+                        continue
                     localParam = getattr(localParam, k)
 
-                if localParam.shape != checkptParam.shape:
+                if exist_param and localParam.shape != checkptParam.shape:
                     logging.warning(
                         "WARNING: shape mismatch between local {} ({}) and checkpoint ({}). Setting local {} to be {}".format(
                             k,

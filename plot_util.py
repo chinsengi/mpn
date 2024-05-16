@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from utility import *
 from sklearn.decomposition import PCA
+from matplotlib.animation import FuncAnimation
 
 c_vals = [
     "firebrick",
@@ -98,6 +99,7 @@ def plot_acc(load_types, tasks, accs, n_trials):
 
 
 def plot_norm(net_type, db, batch, save_dir, save_name):
+    plt.rcParams['font.family'] = 'DejaVu Sans'
     if net_type in ["GRU"]:
         return
     n_batch = 10
@@ -113,13 +115,41 @@ def plot_norm(net_type, db, batch, save_dir, save_name):
     pca = PCA(n_components=2)
     pca.fit(patterns)
     patterns_pca = pca.transform(patterns)
-    patterns_pca = patterns_pca + np.random.normal(0, 0.05, patterns_pca.shape)
+    # patterns_pca = patterns_pca + np.random.normal(0, 0.05, patterns_pca.shape)
     for i in range(n_batch):
         plt.scatter(
             patterns_pca[cluster==i, 0],
             patterns_pca[cluster==i, 1],
-            cmap="viridis",
         )
         
     # plt.scatter(patterns_pca[:, 0], patterns_pca[:, 1], c=cluster.flatten(), cmap="viridis")
     savefig(save_dir, save_name, "png")
+    
+def plot_pattern_gif(net_type, db, batch, save_dir, save_name):
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    if net_type in ["GRU"]:
+        return
+    n_batch = 1
+    if net_type == "FreeNet":
+        M_hist = db["M"][:n_batch]  # shape: [B, T, Nh, Nx]
+    elif net_type == "HebbNet_M":
+        breakpoint()
+    T = M_hist.shape[1]
+    fig = plt.figure()
+    def update(frame):
+        plt.clf()
+        patterns = M_hist[:, frame, :, :].squeeze().reshape(-1, M_hist.shape[-1])
+        pca = PCA(n_components=2)
+        pca.fit(patterns)
+        patterns_pca = pca.transform(patterns)
+        # patterns_pca = patterns_pca + np.random.normal(0, 0.05, patterns_pca.shape)
+        plt.scatter(
+            patterns_pca[:, 0],
+            patterns_pca[:, 1],
+        )
+    
+    ani = FuncAnimation(fig, update, frames=range(T), repeat=False, interval=100)
+    create_dir(save_dir)
+    ani.save(f"{save_dir}/{save_name}.gif", writer="imagemagick", fps=3)
+    # plt.scatter(patterns_pca[:, 0], patterns_pca[:, 1], c=cluster.flatten(), cmap="viridis")
+    # savefig(save_dir, save_name, "png")

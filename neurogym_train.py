@@ -106,7 +106,7 @@ def train_network_ngym(
 # All supervised tasks:
 tasks = (
     # "ContextDecisionMaking-v0",
-    "DelayComparison-v0",
+    # "DelayComparison-v0",
     # ## "DelayMatchCategory-v0",
     # "DelayMatchSample-v0",
     # "DelayMatchSampleDistractor1D-v0",
@@ -123,7 +123,7 @@ tasks = (
     # "ProbabilisticReasoning-v0",
     # ## "PulseDecisionMaking-v0",
     # "ReadySetGo-v0",
-    # "SingleContextDecisionMaking-v0",
+    "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -326,8 +326,8 @@ def main():
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "freeze/scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
@@ -401,8 +401,15 @@ def main():
                     testData[:, :, :], batchMask=testOutputMask
                 )
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
-                # plot_norm(
-                #     net_type, db_load, testData[:], "./figures/sparseness", "norms"
+                plot_norm(
+                    net_type, db_load, testData[:], "./figures/sparseness", "norms"
+                )
+                # plot_pattern_gif(
+                #     net_type,
+                #     db_load,
+                #     testData[:],
+                #     "./figures/patterns",
+                #     "patterns",
                 # )
 
             # breakpoint()
@@ -410,7 +417,7 @@ def main():
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
 
-    plot_acc(load_types, tasks, accs, n_trials)
+    # plot_acc(load_types, tasks, accs, n_trials)
 
 
 if __name__ == "__main__":
