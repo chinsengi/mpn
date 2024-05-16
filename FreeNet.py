@@ -213,7 +213,6 @@ class FreeLayer(nn.Module):
         self.register_buffer(
             "forceHebb", torch.tensor(False)
         )  # Forces eta to be positive
-        self.register_buffer("groundTruthPlast", torch.tensor(False))
 
         self.init_sm_matrix()
 
@@ -321,12 +320,7 @@ class FreeLayer(nn.Module):
         elif self.hebbType == "output":
             pre = torch.ones_like(pre)
         if self.plastic:
-            if self.groundTruthPlast:  # and isFam: # only decays hebbian weights
-                raise NotImplementedError(
-                    "Broke this functionality to get around something earlier."
-                )
-                M = self.lam * self.M
-            elif self.updateType == "hebb":  # normal hebbian update
+            if self.updateType == "hebb":  # normal hebbian update
                 if self.MAct == "tanh":
                     M = torch.tanh(
                         self.lam * self.M + self.eta * torch.bmm(post, pre.unsqueeze(1))
