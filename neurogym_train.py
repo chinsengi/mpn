@@ -181,6 +181,7 @@ def get_args():
         "--disable_early_stop", action="store_true", help="whether to early stop."
     )
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate.")
+    parser.add_argument("--rank", type=int, default=1, help="rank of the weight matrix in MPN.")
     args = parser.parse_args()
 
     return args

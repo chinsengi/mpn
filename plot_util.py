@@ -43,7 +43,7 @@ task_names = (
 )
 
 def plot_acc(load_types, tasks, accs, n_trials):
-
+    plt.rcParams['font.family'] = 'DejaVu Sans'
     # load_colors = (c_vals[5], c_vals[3])
     load_idx_names = []
     for load_type in load_types:
@@ -60,6 +60,8 @@ def plot_acc(load_types, tasks, accs, n_trials):
             net_type = load_type.split("/")[2]
         if net_type == "HebbNet_M":
             net_type = "MPN"
+        if net_type == "FreeNet":
+            net_type = "HPN"
         load_idx_names.append(f"{net_type} {param_type} {freeze_type}")
         
     # load_order = (
@@ -72,8 +74,9 @@ def plot_acc(load_types, tasks, accs, n_trials):
     bar_width = 0.25
     for load_idx, _ in enumerate(load_types):
         ax1.bar(
-            np.arange(len(tasks)) + bar_width * load_idx,
+            np.arange(len(tasks)) + bar_width * (load_idx-1),
             np.mean(accs[load_idx], axis=-1),
+            bar_width,
             color=c_vals[load_idx],
             label=load_idx_names[load_idx],
         )

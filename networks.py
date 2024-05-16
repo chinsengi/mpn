@@ -316,7 +316,7 @@ class HebbNet(StatefulBase):
         #     self.lam = self._lam
         # else:
         self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float))
-        # self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float))
+        # self._lam = nn.Parameter(torch.ones_like(torch.tensor(lam, dtype=torch.float)), requires_grad=False)
         self.lam = self._lam.data
 
     def update_hebb(self, pre, post, isFam=False, stateOnly=False):
