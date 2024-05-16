@@ -105,7 +105,7 @@ def train_network_ngym(
 
 # All supervised tasks:
 tasks = (
-    # "ContextDecisionMaking-v0",
+    "ContextDecisionMaking-v0",
     # "DelayComparison-v0",
     # ## "DelayMatchCategory-v0",
     # "DelayMatchSample-v0",
@@ -123,7 +123,7 @@ tasks = (
     # "ProbabilisticReasoning-v0",
     # ## "PulseDecisionMaking-v0",
     # "ReadySetGo-v0",
-    "SingleContextDecisionMaking-v0",
+    # "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -324,8 +324,8 @@ def main():
 
     load_types = [
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
