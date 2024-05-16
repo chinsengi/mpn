@@ -382,36 +382,13 @@ class FreeLayer(nn.Module):
             )
 
         if self.sparsification == 0.0:
-            if self.mpType == "add":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1), self.w1 + self.M, x.unsqueeze(2)
-                )
-            elif self.mpType == "mult":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1),
-                    self.w1 * (self.M + torch.ones_like(self.M)),
-                    x.unsqueeze(2),
-                )
-            elif self.mpType == "free":
+            if self.mpType == "free":
                 y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
             else:
                 raise NotImplementedError
                 # y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.w1*self.M, x.unsqueeze(2))
         else:  # Applies masking of weights to sparsify network
-            if self.mpType == "add":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1),
-                    self.w1Mask * (self.w1 + self.M),
-                    x.unsqueeze(2),
-                )
-            elif self.mpType == "mult":
-                y_tilde = torch.baddbmm(
-                    self.b1.unsqueeze(1),
-                    self.w1Mask * self.w1 * (self.M + torch.ones_like(self.M)),
-                    x.unsqueeze(2),
-                )
-            else:
-                raise NotImplementedError
+            raise NotImplementedError
 
         # Adds noise to the preactivations
         if self.noiseType in ("layer",):

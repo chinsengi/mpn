@@ -26,13 +26,11 @@ c_vals = [
 task_names = (
     'Context DM',
     'Delay Comparison',
-    # 'Delay Match Category', # No diff from FF
     'Delay Match Sample',
     'Delay Match Sample Dist.',
     'Delay Paired Association',
     'Dual Delay Match Sample',
     'Go No-go',
-    # 'Hierarchical Reasoning', # RL task
     'Interval Discrimination',
     'Motor Timing',
     'Multi-Sensory Integration',
@@ -40,8 +38,6 @@ task_names = (
     'Perceptual DM',
     'Perc. DM Delay Response',
     'Probabilistic Reasoning',
-    # 'Pulse DM', # No diff from FF
-    # 'ReachingDelayResponse-v0', # Different type of input
     'Ready-Set-Go',
     'Single Context DM',
 )
@@ -52,9 +48,17 @@ def plot_acc(load_types, tasks, accs, n_trials):
     load_idx_names = []
     for load_type in load_types:
         param_type = load_type.split("/")[0]
-        filename = load_type.split("/")[1]
-        net_type = filename.split("[")[0]
-        load_idx_names.append(f"{net_type} {param_type}")
+        freeze_type = ""
+        if param_type in ("scalar", "matrix"):
+            net_type = load_type.split("/")[1]
+        elif param_type == "GRU":
+            param_type = ""
+            net_type = "GRU"
+        else:
+            freeze_type = "freeze"
+            param_type = load_type.split("/")[1]
+            net_type = load_type.split("/")[2]
+        load_idx_names.append(f"{net_type} {param_type} {freeze_type}")
         
     # load_order = (
     #     2,
