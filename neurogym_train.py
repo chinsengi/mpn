@@ -106,24 +106,24 @@ def train_network_ngym(
 # All supervised tasks:
 tasks = (
     "ContextDecisionMaking-v0",
-    # "DelayComparison-v0",
-    # ## "DelayMatchCategory-v0",
-    # "DelayMatchSample-v0",
-    # "DelayMatchSampleDistractor1D-v0",
-    # "DelayPairedAssociation-v0",
-    # "DualDelayMatchSample-v0",
-    # "GoNogo-v0",
-    # ## "HierarchicalReasoning-v0",
-    # "IntervalDiscrimination-v0",
-    # "MotorTiming-v0",
-    # "MultiSensoryIntegration-v0",
-    # "OneTwoThreeGo-v0",
-    # "PerceptualDecisionMaking-v0",
-    # "PerceptualDecisionMakingDelayResponse-v0",
-    # "ProbabilisticReasoning-v0",
-    # ## "PulseDecisionMaking-v0",
-    # "ReadySetGo-v0",
-    # "SingleContextDecisionMaking-v0",
+    "DelayComparison-v0",
+    ## "DelayMatchCategory-v0",
+    "DelayMatchSample-v0",
+    "DelayMatchSampleDistractor1D-v0",
+    "DelayPairedAssociation-v0",
+    "DualDelayMatchSample-v0",
+    "GoNogo-v0",
+    ## "HierarchicalReasoning-v0",
+    "IntervalDiscrimination-v0",
+    "MotorTiming-v0",
+    "MultiSensoryIntegration-v0",
+    "OneTwoThreeGo-v0",
+    "PerceptualDecisionMaking-v0",
+    "PerceptualDecisionMakingDelayResponse-v0",
+    "ProbabilisticReasoning-v0",
+    ## "PulseDecisionMaking-v0",
+    "ReadySetGo-v0",
+    "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -325,7 +325,8 @@ def main():
     load_types = [
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
         "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "input/matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
@@ -400,16 +401,19 @@ def main():
                 db_load = net_load.evaluate_debug(
                     testData[:, :, :], batchMask=testOutputMask
                 )
+                breakpoint()
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
+                net_type = net_params_load["netType"]
+                lam_type = net_params_load["lam_type"]
                 plot_norm(
-                    net_type, db_load, testData[:], "./figures/sparseness", "norms"
+                    net_type, db_load, testData[:], "./figures/sparseness", f"norms_{task}_{net_type}_{lam_type}"
                 )
                 # plot_pattern_gif(
                 #     net_type,
                 #     db_load,
                 #     testData[:],
                 #     "./figures/patterns",
-                #     "patterns",
+                #     f"patterns_{task}_{net_type}_{lam_type}",
                 # )
 
             # breakpoint()

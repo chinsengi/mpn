@@ -498,7 +498,7 @@ def savefig(path="./image", filename="image", format="png", include_timestamp=Tr
     create_dir(path)
     if include_timestamp:
         t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
+        current_time = time.strftime("%H_%M_%S", t)
     else:
         current_time = ""
     plt.savefig(
