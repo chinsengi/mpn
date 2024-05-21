@@ -23,6 +23,18 @@ c_vals = [
     "tan",
 ]
 
+c_vals_dl = [
+    "#c53030",
+    "#2b6cb0",
+    "#2f855a",
+    "#6b46c1",
+    "#c05621",
+    "#2c7a7b",
+    "#4a5568",
+    "#b83280",
+    "#b7791f",
+]
+
 task_names = (
     "Context DM",
     "Delay Comparison",
@@ -45,7 +57,7 @@ task_names = (
 
 def plot_acc(load_types, tasks, accs, n_trials):
     plt.rcParams["font.family"] = "DejaVu Sans"
-    # load_colors = (c_vals[5], c_vals[3])
+    load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6])
     load_idx_names = []
     for load_type in load_types:
         param_type = load_type.split("/")[0]
@@ -109,9 +121,13 @@ def plot_norm(net_type, db, batch, save_dir, save_name):
         M_hist = db["M"][:n_batch]  # shape: [B, T, Nh, Nx]
     elif net_type == "HebbNet_M":
         breakpoint()
-    cue_time = np.nonzero(batch[1][:n_batch,:])[:, :2].cpu().numpy()
-    cue_time = cue_time[0:1,:]
-    patterns = M_hist[cue_time[:, 0], cue_time[:, 1], :, :].squeeze().reshape(-1, M_hist.shape[-1])
+    cue_time = np.nonzero(batch[1][:n_batch, :])[:, :2].cpu().numpy()
+    cue_time = cue_time[0:1, :]
+    patterns = (
+        M_hist[cue_time[:, 0], cue_time[:, 1], :, :]
+        .squeeze()
+        .reshape(-1, M_hist.shape[-1])
+    )
     cluster = cue_time[:, 0]
     cluster = np.repeat(cluster, M_hist.shape[2])
     pca = PCA(n_components=2)
