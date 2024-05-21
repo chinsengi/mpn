@@ -402,7 +402,7 @@ def main():
                         net_type = "MPN"
                     if net_type == "FreeNet":
                         net_type = "HPN"
-                    load_idx_names.append(f"{net_type} eta {eta_type} lam {lam_type} {freeze_type}")
+                    load_idx_names.append(fr"{net_type} $\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}")
                     
                 net_load.to(device)
                 # Have to recreate the dataset in dataset_params_load since its not saved
@@ -433,9 +433,9 @@ def main():
                 net_type = net_params_load["netType"]
                 lam_type = net_params_load["lam_type"]
                 eta_type = net_params_load["eta_type"]
-                plot_norm(
-                    net_type, db_load, testData[:], f"./figures/sparseness/", f"norms_{task}_{net_type}_{lam_type}_{eta_type}"
-                )
+                # plot_norm(
+                #     net_type, db_load, testData[:], f"./figures/sparseness/", f"norms_{task}_{net_type}_{lam_type}_{eta_type}"
+                # )
                 # plot_pattern_gif(
                 #     net_type,
                 #     db_load,
@@ -449,7 +449,7 @@ def main():
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
 
-    # plot_acc(load_idx_names, tasks, accs, n_trials)
+    plot_acc(load_idx_names, tasks, accs, n_trials)
 
 
 if __name__ == "__main__":

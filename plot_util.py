@@ -57,41 +57,37 @@ task_names = (
 
 def plot_acc(load_idx_names, tasks, accs, n_trials):
     plt.rcParams["font.family"] = "DejaVu Sans"
+    plt.rcParams.update({'font.size': 14})
     # load_colors = (c_vals[5], c_vals[3])
-    load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6])
+    load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6], c_vals[2])
 
-    # load_order = (
-    #     2,
-    #     1,
-    # )  # Puts MPN first
-
-    fig1, ax1 = plt.subplots(1, 1, figsize=(12, 8))
+    fig1, ax1 = plt.subplots(1, 1, figsize=(24, 16))
 
     bar_width = 0.8/len(load_idx_names)
     for load_idx, _ in enumerate(load_idx_names):
         ax1.bar(
-            np.arange(len(tasks)) + bar_width * (load_idx - 1),
+            np.arange(len(tasks)) + bar_width * (load_idx - len(load_idx_names) / 2+.5),
             np.mean(accs[load_idx], axis=-1),
             bar_width,
-            color=c_vals[load_idx],
+            # color=load_colors[load_idx],
             label=load_idx_names[load_idx],
         )
 
     ax1.set_xticks(np.arange(len(tasks)))
-    ax1.set_xticklabels(task_names, rotation=45, fontsize=8, ha="right")
+    ax1.set_xticklabels(task_names[:len(tasks)], rotation=45, ha="right")
 
-    ax1.set_ylim((0.4, 1.0))
+    ax1.set_ylim((0.4, 1.2))
     ax1.set_yticks((0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
     ax1.set_yticklabels((0.5, None, None, None, None, 1.0))
     ax1.set_ylabel("Accuracy")
-    ax1.legend()
+    ax1.legend(fontsize=12)
 
     for it in range(0, len(tasks), 2):
         ax1.axvline(it, color="grey", alpha=0.2, zorder=-1)
 
     # jetplot.breathe(ax=ax1)
     plt.tight_layout()
-    savefig("./figures", "ngym_accs", "png")
+    savefig("./figures", "ngym_accs", "pdf")
 
 
 def plot_norm(net_type, db, batch, save_dir, save_name):
