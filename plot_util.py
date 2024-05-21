@@ -55,27 +55,10 @@ task_names = (
 )
 
 
-def plot_acc(load_types, tasks, accs, n_trials):
+def plot_acc(load_idx_names, tasks, accs, n_trials):
     plt.rcParams["font.family"] = "DejaVu Sans"
+    # load_colors = (c_vals[5], c_vals[3])
     load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6])
-    load_idx_names = []
-    for load_type in load_types:
-        param_type = load_type.split("/")[0]
-        freeze_type = ""
-        if param_type in ("scalar", "matrix"):
-            net_type = load_type.split("/")[1]
-        elif param_type == "GRU":
-            param_type = ""
-            net_type = "GRU"
-        else:
-            freeze_type = "freeze"
-            param_type = load_type.split("/")[1]
-            net_type = load_type.split("/")[2]
-        if net_type == "HebbNet_M":
-            net_type = "MPN"
-        if net_type == "FreeNet":
-            net_type = "HPN"
-        load_idx_names.append(f"{net_type} {param_type} {freeze_type}")
 
     # load_order = (
     #     2,
@@ -84,8 +67,8 @@ def plot_acc(load_types, tasks, accs, n_trials):
 
     fig1, ax1 = plt.subplots(1, 1, figsize=(12, 8))
 
-    bar_width = 0.25
-    for load_idx, _ in enumerate(load_types):
+    bar_width = 0.8/len(load_idx_names)
+    for load_idx, _ in enumerate(load_idx_names):
         ax1.bar(
             np.arange(len(tasks)) + bar_width * (load_idx - 1),
             np.mean(accs[load_idx], axis=-1),
@@ -97,7 +80,7 @@ def plot_acc(load_types, tasks, accs, n_trials):
     ax1.set_xticks(np.arange(len(tasks)))
     ax1.set_xticklabels(task_names, rotation=45, fontsize=8, ha="right")
 
-    ax1.set_ylim((0.4, 1.1))
+    ax1.set_ylim((0.4, 1.0))
     ax1.set_yticks((0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
     ax1.set_yticklabels((0.5, None, None, None, None, 1.0))
     ax1.set_ylabel("Accuracy")

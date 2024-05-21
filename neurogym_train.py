@@ -227,9 +227,9 @@ def main():
     save = args.save
     net_type = args.net_type
     if not args.freeze_inputs:
-        save_root = os.path.join(args.save_path, args.hebb_type, args.param_type, net_type)
+        save_root = os.path.join(args.save_path, args.param_type, net_type)
     else:
-        save_root = os.path.join(args.save_path, "freeze", args.hebb_type, args.param_type, net_type)
+        save_root = os.path.join(args.save_path, "freeze", args.param_type, net_type)
 
     n_trials = 1
     acc_thresh = 0.99
@@ -237,6 +237,20 @@ def main():
     min_max_iter = (0, 10000)
     init_seed = 1003
     device = use_gpu()
+    
+    if args.param_type == "matrix":
+        lam_type = "matrix"
+        eta_type = "matrix"
+    elif args.param_type == "scalar":
+        lam_type = "scalar"
+        eta_type = "scalar"
+    elif args.param_type == "eta_scalar_lam_mat":
+        lam_type = "matrix"
+        eta_type = "scalar"
+    elif args.param_type == "eta_mat_lam_scalar":
+        lam_type = "scalar"
+        eta_type = "matrix"
+    
     if train:
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
@@ -257,10 +271,10 @@ def main():
                 "output_layer": "single",  # single | double
                 # STPN Features
                 "A_act": None,  # Activation on the A update (tanh or None)
-                "lam_type": args.param_type,  # scalar or matrix
+                "lam_type": lam_type,  # scalar or matrix
                 "lam_clamp": 1,  # Maximum lambda value
                 "layer_bias": False,  # Use bias on the hidden layer
-                "eta_type": args.param_type,  # scalar or vector
+                "eta_type": eta_type,  # scalar or vector
                 "eta_force": None,  # ensure either Hebbian or anti-Hebbian plasticity
                 "hebb_type": args.hebb_type,  # input, output, inputOutput
                 "modulation_bounds": False,  # bound modulations
@@ -325,12 +339,14 @@ def main():
     load_types = [
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
         "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "eta_scalar_lam_mat/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "eta_mat_lam_scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "input/matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "freeze/scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
@@ -343,7 +359,7 @@ def main():
             n_trials,
         )
     )
-
+    load_idx_names = []
     for task_idx, task in enumerate(tasks):
 
         # Uses the dataset_params array created above just to specify loading name
@@ -376,7 +392,18 @@ def main():
                 net_load, net_params_load, dataset_params_load = load_net(
                     load_path, init_seed + trial_idx, device=device
                 )
-                # net_load = net
+                
+                if task_idx == 0:
+                    net_type = net_params_load["netType"]
+                    eta_type = net_params_load["eta_type"]
+                    lam_type = net_params_load["lam_type"]
+                    freeze_type = "freeze" if net_params_load["freeze_inputs"] else ""
+                    if net_type == "HebbNet_M":
+                        net_type = "MPN"
+                    if net_type == "FreeNet":
+                        net_type = "HPN"
+                    load_idx_names.append(f"{net_type} eta {eta_type} lam {lam_type} {freeze_type}")
+                    
                 net_load.to(device)
                 # Have to recreate the dataset in dataset_params_load since its not saved
                 kwargs = {"dt": dataset_params_load["dt"]}
@@ -401,12 +428,13 @@ def main():
                 db_load = net_load.evaluate_debug(
                     testData[:, :, :], batchMask=testOutputMask
                 )
-                breakpoint()
+                # breakpoint()
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
                 net_type = net_params_load["netType"]
                 lam_type = net_params_load["lam_type"]
+                eta_type = net_params_load["eta_type"]
                 plot_norm(
-                    net_type, db_load, testData[:], "./figures/sparseness", f"norms_{task}_{net_type}_{lam_type}"
+                    net_type, db_load, testData[:], f"./figures/sparseness/", f"norms_{task}_{net_type}_{lam_type}_{eta_type}"
                 )
                 # plot_pattern_gif(
                 #     net_type,
@@ -421,7 +449,7 @@ def main():
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
 
-    # plot_acc(load_types, tasks, accs, n_trials)
+    # plot_acc(load_idx_names, tasks, accs, n_trials)
 
 
 if __name__ == "__main__":
