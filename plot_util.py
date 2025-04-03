@@ -57,7 +57,7 @@ task_names = (
 
 def plot_acc(load_idx_names, tasks, accs, n_trials):
     plt.rcParams["font.family"] = "DejaVu Sans"
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 28})
     # load_colors = (c_vals[5], c_vals[3])
     load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6], c_vals[2])
 
@@ -74,13 +74,13 @@ def plot_acc(load_idx_names, tasks, accs, n_trials):
         )
 
     ax1.set_xticks(np.arange(len(tasks)))
-    ax1.set_xticklabels(task_names[:len(tasks)], rotation=45, ha="right")
+    ax1.set_xticklabels(task_names[:len(tasks)], rotation=45, ha="right", fontsize=36)
 
     ax1.set_ylim((0.4, 1.2))
     ax1.set_yticks((0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
-    ax1.set_yticklabels((0.5, None, None, None, None, 1.0))
+    ax1.set_yticklabels((0.5, None, None, None, None, 1.0), fontsize=36)
     ax1.set_ylabel("Accuracy")
-    ax1.legend(fontsize=12)
+    ax1.legend(fontsize=36)
 
     for it in range(0, len(tasks), 2):
         ax1.axvline(it, color="grey", alpha=0.2, zorder=-1)
@@ -89,7 +89,10 @@ def plot_acc(load_idx_names, tasks, accs, n_trials):
     plt.tight_layout()
     savefig("./figures", "ngym_accs", "pdf")
 
-
+'''
+Parameters:
+    - batch: input data
+'''
 def plot_norm(net_type, db, batch, save_dir, save_name):
     plt.clf()
     plt.rcParams["font.family"] = "DejaVu Sans"
@@ -100,28 +103,30 @@ def plot_norm(net_type, db, batch, save_dir, save_name):
         M_hist = db["M"][:n_batch]  # shape: [B, T, Nh, Nx]
     elif net_type == "HebbNet_M":
         breakpoint()
-    cue_time = np.nonzero(batch[1][:n_batch, :])[:, :2].cpu().numpy()
-    cue_time = cue_time[0:1, :]
+    cue_time = np.nonzero(batch[1][:n_batch, :])[:, :2].cpu().numpy() # when label is non-zero, it is a cue time
+    # cue_time = cue_time[0:1, :]
     patterns = (
         M_hist[cue_time[:, 0], cue_time[:, 1], :, :]
         .squeeze()
         .reshape(-1, M_hist.shape[-1])
     )
-    cluster = cue_time[:, 0]
+    # cluster = cue_time[:, 0]
+    cluster = np.arange(cue_time.shape[0])
     cluster = np.repeat(cluster, M_hist.shape[2])
     pca = PCA(n_components=2)
     pca.fit(patterns)
     patterns_pca = pca.transform(patterns)
-    # patterns_pca = patterns_pca + np.random.normal(0, 0.01, patterns_pca.shape)
-    for i in range(n_batch):
-        plt.scatter(
-            patterns_pca[cluster == i, 0],
-            patterns_pca[cluster == i, 1],
-            s=10,
-        )
-    plt.xlim(-3, 3)
-    plt.ylim(-3, 3)
-    # plt.scatter(patterns_pca[:, 0], patterns_pca[:, 1], c=cluster.flatten(), cmap="viridis")
+    patterns_pca = patterns_pca + np.random.normal(0, 0.01, patterns_pca.shape)
+    # for i in range(n_batch):
+    #     plt.scatter(
+    #         patterns_pca[cluster == i, 0],
+    #         patterns_pca[cluster == i, 1],
+    #         s=10,
+    #     )
+    # breakpoint()
+    plt.scatter(patterns_pca[:, 0], patterns_pca[:, 1], s = 10, c=cluster.flatten(), cmap="Set1", alpha = 0.5, marker='.')
+    # plt.xlim(-3, 3)
+    # plt.ylim(-3, 3)
     savefig(save_dir, save_name, "png")
 
 

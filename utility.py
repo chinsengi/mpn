@@ -395,7 +395,7 @@ def HebbNet_word_proj(word, As, net, toy_params):
 
 def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=None):
     """
-    This converts a neroGym dataset into one that the code can use.
+    This converts a neuroGym dataset into one that the code can use.
 
     Mostly just transposes the batch and sequence dimensions, then combines
     them into a TensorDataset. Also creates a mask of all trues.

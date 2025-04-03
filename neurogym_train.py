@@ -105,25 +105,25 @@ def train_network_ngym(
 
 # All supervised tasks:
 tasks = (
-    "ContextDecisionMaking-v0",
-    "DelayComparison-v0",
-    ## "DelayMatchCategory-v0",
-    "DelayMatchSample-v0",
-    "DelayMatchSampleDistractor1D-v0",
-    "DelayPairedAssociation-v0",
-    "DualDelayMatchSample-v0",
-    "GoNogo-v0",
-    ## "HierarchicalReasoning-v0",
-    "IntervalDiscrimination-v0",
-    "MotorTiming-v0",
-    "MultiSensoryIntegration-v0",
-    "OneTwoThreeGo-v0",
-    "PerceptualDecisionMaking-v0",
-    "PerceptualDecisionMakingDelayResponse-v0",
-    "ProbabilisticReasoning-v0",
+    # "ContextDecisionMaking-v0",
+    # "DelayComparison-v0",
+    # ## "DelayMatchCategory-v0",
+    # "DelayMatchSample-v0",
+    # "DelayMatchSampleDistractor1D-v0",
+    # "DelayPairedAssociation-v0",
+    # "DualDelayMatchSample-v0",
+    # "GoNogo-v0",
+    # ## "HierarchicalReasoning-v0",
+    # "IntervalDiscrimination-v0",
+    # "MotorTiming-v0",
+    # "MultiSensoryIntegration-v0",
+    # "OneTwoThreeGo-v0",
+    # "PerceptualDecisionMaking-v0",
+    # "PerceptualDecisionMakingDelayResponse-v0",
+    # "ProbabilisticReasoning-v0",
     ## "PulseDecisionMaking-v0",
     "ReadySetGo-v0",
-    "SingleContextDecisionMaking-v0",
+    # "SingleContextDecisionMaking-v0",
 )
 
 tasks_masks = {
@@ -338,15 +338,15 @@ def main():
 
     load_types = [
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "eta_scalar_lam_mat/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "eta_mat_lam_scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "input/matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
-        "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "scalar/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "matrix/HebbNet/HebbNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "freeze/scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
     ]
 
@@ -402,7 +402,12 @@ def main():
                         net_type = "MPN"
                     if net_type == "FreeNet":
                         net_type = "HPN"
-                    load_idx_names.append(fr"{net_type} $\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}")
+                    # load_idx_names.append(fr"{net_type} $\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}")
+                    if eta_type == "scalar": eta_type = "uniform"
+                    if lam_type == "scalar": lam_type = "uniform"
+                    if eta_type == "matrix": eta_type = "hetero"
+                    if lam_type == "matrix": lam_type = "hetero"
+                    load_idx_names.append(fr"$\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}")
                     
                 net_load.to(device)
                 # Have to recreate the dataset in dataset_params_load since its not saved
@@ -426,7 +431,7 @@ def main():
 
                 # db_load has the following keys: ['x', 'h_tilde', 'h', 'Wxb', 'M', 'Mx', 'y_tilde', 'out', 'acc']
                 db_load = net_load.evaluate_debug(
-                    testData[:, :, :], batchMask=testOutputMask
+                    testData[:], batchMask=testOutputMask
                 )
                 # breakpoint()
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
@@ -436,13 +441,13 @@ def main():
                 # plot_norm(
                 #     net_type, db_load, testData[:], f"./figures/sparseness/", f"norms_{task}_{net_type}_{lam_type}_{eta_type}"
                 # )
-                # plot_pattern_gif(
-                #     net_type,
-                #     db_load,
-                #     testData[:],
-                #     "./figures/patterns",
-                #     f"patterns_{task}_{net_type}_{lam_type}",
-                # )
+                plot_pattern_gif(
+                    net_type,
+                    db_load,
+                    testData[:],
+                    "./figures/patterns",
+                    f"patterns_{task}_{net_type}_{lam_type}",
+                )
 
             # breakpoint()
             logging.info(

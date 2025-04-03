@@ -642,7 +642,8 @@ class FreeNet(StatefulBase):
     @torch.no_grad()
     def evaluate_debug(self, batch, batchMask=None, acc=True, reset=True):
         """
-        Runs a full sequence of the given batch size through the network, but now keeps track of all sorts of parameters
+        Runs a full sequence of the given batch size through the network, but now keeps track of all 
+        sorts of parameters
         """
         B = batch[0].shape[0]
 
@@ -668,8 +669,6 @@ class FreeNet(StatefulBase):
 
             db["x"][:, time_idx, :] = x
             # # Note A for this given time_idx was updated on the previous pass (so A[time_idx=0] will be A0)
-            # if time_idx ==99:
-            #     breakpoint()
             (
                 db["h_tilde"][:, time_idx, :],
                 db["h"][:, time_idx, :],
