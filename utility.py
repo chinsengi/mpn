@@ -12,6 +12,18 @@ from net_utils import random_weight_init
 from FreeNet import FreeNet
 import neurogym as ngym
 
+NET_TYPES = [
+    "nnLSTM",
+    "GRU",
+    "VanillaRNN",
+    "HebbNet",
+    "HebbNet_M",
+    "rHebbNet",
+    "rHebbNet_M",
+    "GHU",
+    "GHU_M",
+    "FreeNet",
+]
 
 def default_params(net_params):
     # Applies default parameters. Note this was implemented only when writing
@@ -31,12 +43,12 @@ def init_net(net_params, verbose=True, device="cpu"):
     net_params = default_params(net_params)
 
     # initialize net with default values
-    if net_params["netType"] == "nnLSTM":
+    if net_params["netType"] == NET_TYPES[0]:  # "nnLSTM"
         net = nets.nnLSTM(
             [net_params["n_inputs"], net_params["n_hidden"], net_params["n_outputs"]],
-            batch_size = net_params["batch_size"],device=device
+            batch_size=net_params["batch_size"], device=device
         )
-    elif net_params["netType"] == "GRU":
+    elif net_params["netType"] == NET_TYPES[1]:  # "GRU"
         net = nets.GRU(
             [net_params["n_inputs"], net_params["n_hidden"], net_params["n_outputs"]],
             trainableState0=net_params["trainable_state0"],
@@ -50,7 +62,7 @@ def init_net(net_params, verbose=True, device="cpu"):
             noiseScale=net_params["noise_scale"],
             verbose=verbose,
         )
-    elif net_params["netType"] == "VanillaRNN":
+    elif net_params["netType"] == NET_TYPES[2]:  # "VanillaRNN"
         net = nets.VanillaRNN(
             [net_params["n_inputs"], net_params["n_hidden"], net_params["n_outputs"]],
             trainableState0=net_params["trainable_state0"],
@@ -65,28 +77,28 @@ def init_net(net_params, verbose=True, device="cpu"):
             verbose=verbose,
         )
     elif net_params["netType"] in (
-        "HebbNet",
-        "HebbNet_M",
-        "rHebbNet",
-        "rHebbNet_M",
-        "GHU",
-        "GHU_M",
-        "FreeNet",
+        NET_TYPES[3],  # "HebbNet"
+        NET_TYPES[4],  # "HebbNet_M"
+        NET_TYPES[5],  # "rHebbNet"
+        NET_TYPES[6],  # "rHebbNet_M"
+        NET_TYPES[7],  # "GHU"
+        NET_TYPES[8],  # "GHU_M"
+        NET_TYPES[9],  # "FreeNet"
     ):
-        if net_params["netType"] in ("HebbNet_M", "rHebbNet_M", "GHU_M"):
+        if net_params["netType"] in (NET_TYPES[4], NET_TYPES[6], NET_TYPES[8]):  # "HebbNet_M", "rHebbNet_M", "GHU_M"
             stpType = "mult"
-        elif net_params["netType"] in ("HebbNet", "rHebbNet", "GHU"):
+        elif net_params["netType"] in (NET_TYPES[3], NET_TYPES[5], NET_TYPES[7]):  # "HebbNet", "rHebbNet", "GHU"
             stpType = "add"
-        elif net_params["netType"] in ("FreeNet"):
+        elif net_params["netType"] == NET_TYPES[9]:  # "FreeNet"
             stpType = "free"
-            
-        if net_params["netType"] in ("HebbNet", "HebbNet_M"):
+
+        if net_params["netType"] in (NET_TYPES[3], NET_TYPES[4]):  # "HebbNet", "HebbNet_M"
             netClass = nets.HebbNet
-        elif net_params["netType"] in ("rHebbNet", "rHebbNet_M"):
+        elif net_params["netType"] in (NET_TYPES[5], NET_TYPES[6]):  # "rHebbNet", "rHebbNet_M"
             netClass = nets.RecHebbNet
-        elif net_params["netType"] in ("GHU", "GHU_M"):
+        elif net_params["netType"] in (NET_TYPES[7], NET_TYPES[8]):  # "GHU", "GHU_M"
             netClass = nets.GHU
-        elif net_params["netType"] in ("FreeNet"):
+        elif net_params["netType"] == NET_TYPES[9]:  # "FreeNet"
             netClass = FreeNet
 
         net = netClass(
@@ -129,7 +141,7 @@ def init_net(net_params, verbose=True, device="cpu"):
         elif net_params["eta_force"] is not None:
             raise ValueError
     else:
-        raise ValueError
+        raise ValueError("Network type {} not recognized".format(net_params["netType"]))
 
     return net.to(device)
 

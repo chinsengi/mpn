@@ -239,18 +239,20 @@ def main():
     init_seed = 1003
     device = use_gpu()
     
-    if args.param_type == "matrix":
+    if args.param_type == PARAM_TYPE[1]:
         lam_type = "matrix"
         eta_type = "matrix"
-    elif args.param_type == "scalar":
+    elif args.param_type == PARAM_TYPE[0]:
         lam_type = "scalar"
         eta_type = "scalar"
-    elif args.param_type == "eta_scalar_lam_mat":
+    elif args.param_type == PARAM_TYPE[2]:
         lam_type = "matrix"
         eta_type = "scalar"
-    elif args.param_type == "eta_mat_lam_scalar":
+    elif args.param_type == PARAM_TYPE[3]:
         lam_type = "scalar"
         eta_type = "matrix"
+    else:
+        raise ValueError(f"Unknown parameter type: {args.param_type}")
     
     if train:
         for task_idx, task in enumerate(tasks):
