@@ -85,11 +85,6 @@ class FreeLayer(nn.Module):
 
         # Determines whether or not layer weights are trainable parameters
         self.freezeInputs = mpnArgs.get("freezeInputs", False)
-        if self.freezeInputs:  # Does not train input layer
-            init_string += "W: Frozen // "
-            self.register_buffer("w1", torch.tensor(W[0], dtype=torch.float))
-        else:
-            self.w1 = nn.Parameter(torch.tensor(W[0], dtype=torch.float))
 
         # Determines if layer bias is present and trainable (can overwhelm noise during delay).
         self.layerBias = mpnArgs.get("layerBias", True)
@@ -100,7 +95,7 @@ class FreeLayer(nn.Module):
             init_string += "Layer bias: frozen // "
             self.register_buffer("b1", torch.tensor(b[0], dtype=torch.float))
         else:  # No hidden bias
-            init_string += "No layer bias // "
+            init_string += "No hidden layer bias // "
             self.register_buffer(
                 "b1", torch.zeros_like(torch.tensor(b[0], dtype=torch.float))
             )
@@ -251,7 +246,6 @@ class FreeLayer(nn.Module):
             self.lamType == "scalar"
         ):  # For scalar and scalar only, lam is automatically initialized to the clamped value, otherwise uniform
             lam = [[[self.lamClamp]]]  # shape (1, 1, 1)
-            # eta = [[[-5./self.w1.shape[1]]]] #eta*d = -5, shape (1, 1, 1)
         elif self.lamType == "pre_vector":
             lam = np.random.uniform(low=0.0, high=self.lamClamp, size=(self.n_inputs,))
             lam = lam[np.newaxis, np.newaxis, :]  # makes (1, 1, Nx)
@@ -364,22 +358,20 @@ class FreeLayer(nn.Module):
         # print('x', x.shape)
         # print('b1', self.b1.shape)
 
-        # b1 + (w1 + A) * x
+        # b1 + M * x
         # (Nh, 1) + [(B, Nh, Nx) x (B, Nx, 1) = (B, Nh, 1)] = (B, Nh, 1) -> (B, Nh)
 
-        # Clamps w1 before it is used in forward pass if cellTypes are being used
+        # Clamps M before it is used in forward pass if cellTypes are being used
         if (
             self.useCellTypes
         ):  # First multiplication removes signs, then clamps, then restores them
-            self.w1.data = (
-                torch.clamp(self.w1.data * self.cellTypes, min=0.0, max=1e6)
+            self.M = (
+                torch.clamp(self.M * self.cellTypes, min=0.0, max=1e6)
                 * self.cellTypes
             )
 
-        if self.sparsification == 0.0:
-            y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
-        else:  # Applies masking of weights to sparsify network
-            raise NotImplementedError
+        assert self.sparsification == 0.0, "Weight sparsification not implemented yet"
+        y_tilde = torch.baddbmm(self.b1.unsqueeze(1), self.M, x.unsqueeze(2))
 
         # Adds noise to the preactivations
         if self.noiseType in ("layer",):

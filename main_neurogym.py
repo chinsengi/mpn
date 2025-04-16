@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import jetplot
 from plot_util import *
 
+PARAM_TYPE = ["scalar", "matrix", "eta_scalar_lam_mat", "eta_mat_lam_scalar"]
 
 def train_network_ngym(
     net_params,
@@ -441,19 +442,17 @@ def main():
                 # plot_norm(
                 #     net_type, db_load, testData[:], f"./figures/sparseness/", f"norms_{task}_{net_type}_{lam_type}_{eta_type}"
                 # )
-                plot_pattern_gif(
-                    net_type,
-                    db_load,
-                    testData[:],
-                    "./figures/patterns",
-                    f"patterns_{task}_{net_type}_{lam_type}",
-                )
+                # plot_pattern_gif(
+                #     net_type,
+                #     db_load,
+                #     testData[:],
+                #     "./figures/patterns",
+                #     f"patterns_{task}_{net_type}_{lam_type}",
+                # )
 
-            # breakpoint()
             logging.info(
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
-
     plot_acc(load_idx_names, tasks, accs, n_trials)
 
 
