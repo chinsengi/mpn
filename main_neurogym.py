@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 import neurogym as ngym
-from plot_util import plot_acc
+from plot_util import plot_acc, plot_norm, plot_pattern_gif
 from utility import (
     convert_ngym_dataset,
     init_net,
@@ -204,6 +204,17 @@ def get_args():
         type=str,
         default="inputOutput",
         help="type of Hebbian plasticity.",
+    )
+    parser.add_argument(
+        "--plot_acc", action="store_true", help="whether to plot accuracy."
+    )
+    parser.add_argument(
+        "--plot_norm", action="store_true", help="whether to plot norms."
+    )
+    parser.add_argument(
+        "--plot_patterns_gif",
+        action="store_true",
+        help="whether to plot patterns as gif.",
     )
     args = parser.parse_args()
 
@@ -463,21 +474,28 @@ def main():
                 net_type = net_params_load["netType"]
                 lam_type = net_params_load["lam_type"]
                 eta_type = net_params_load["eta_type"]
-                # plot_norm(
-                #     net_type, db_load, testData[:], f"./figures/sparseness/", f"norms_{task}_{net_type}_{lam_type}_{eta_type}"
-                # )
-                # plot_pattern_gif(
-                #     net_type,
-                #     db_load,
-                #     testData[:],
-                #     "./figures/patterns",
-                #     f"patterns_{task}_{net_type}_{lam_type}",
-                # )
+                if args.plot_norm:
+                    plot_norm(
+                        net_type,
+                        db_load,
+                        testData[:],
+                        "./figures/sparseness/",
+                        f"norms_{task}_{net_type}_{lam_type}_{eta_type}",
+                    )
+                if args.plot_patterns_gif:
+                    plot_pattern_gif(
+                        net_type,
+                        db_load,
+                        testData[:],
+                        "./figures/patterns",
+                        f"patterns_{task}_{net_type}_{lam_type}",
+                    )
 
             logging.info(
                 "  Acc: {:.3f}".format(np.mean(accs[load_idx, task_idx, :], axis=-1))
             )
-    plot_acc(load_idx_names, tasks, accs, n_trials)
+    if args.plot_acc:
+        plot_acc(load_idx_names, tasks, accs, n_trials)
 
 
 if __name__ == "__main__":

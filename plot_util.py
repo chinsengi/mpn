@@ -106,12 +106,10 @@ Parameters:
 def plot_norm(net_type, db, batch, save_dir, save_name):
     plt.clf()
     plt.rcParams["font.family"] = "DejaVu Sans"
-    if net_type in ["GRU"]:
-        return
     n_batch = 2
     if net_type == "FreeNet":
         M_hist = db["M"][:n_batch]  # shape: [B, T, Nh, Nx]
-    elif net_type == "HebbNet_M":
+    elif net_type in ["HebbNet_M", "GRU"]:
         raise NotImplementedError("plot norm not implemented for HebbNet_M")
     cue_time = (
         np.nonzero(batch[1][:n_batch, :])[:, :2].cpu().numpy()
