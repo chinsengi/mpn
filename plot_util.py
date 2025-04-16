@@ -1,7 +1,11 @@
+import logging
+
 import matplotlib.pyplot as plt
-from utility import *
-from sklearn.decomposition import PCA
+import numpy as np
 from matplotlib.animation import FuncAnimation
+from sklearn.decomposition import PCA
+
+from utility import create_dir, savefig
 
 c_vals = [
     "firebrick",
@@ -35,38 +39,39 @@ c_vals_dl = [
     "#b7791f",
 ]
 
-task_names = (
-    "Context DM",
-    "Delay Comparison",
-    "Delay Match Sample",
-    "Delay Match Sample Dist.",
-    "Delay Paired Association",
-    "Dual Delay Match Sample",
-    "Go No-go",
-    "Interval Discrimination",
-    "Motor Timing",
-    "Multi-Sensory Integration",
-    "One Two Three Go",
-    "Perceptual DM",
-    "Perc. DM Delay Response",
-    "Probabilistic Reasoning",
-    "Ready-Set-Go",
-    "Single Context DM",
-)
+task_names = {
+    "ContextDecisionMaking-v0": "Context DM",
+    "DelayComparison-v0": "Delay Comparison",
+    "DelayMatchSample-v0": "Delay Match Sample",
+    "DelayMatchSampleDistractor1D-v0": "Delay Match Sample Dist.",
+    "DelayPairedAssociation-v0": "Delay Paired Association",
+    "DualDelayMatchSample-v0": "Dual Delay Match Sample",
+    "GoNogo-v0": "Go No-go",
+    "IntervalDiscrimination-v0": "Interval Discrimination",
+    "MotorTiming-v0": "Motor Timing",
+    "MultiSensoryIntegration-v0": "Multi-Sensory Integration",
+    "OneTwoThreeGo-v0": "One Two Three Go",
+    "PerceptualDecisionMaking-v0": "Perceptual DM",
+    "PerceptualDecisionMakingDelayResponse-v0": "Perc. DM Delay Response",
+    "ProbabilisticReasoning-v0": "Probabilistic Reasoning",
+    "ReadySetGo-v0": "Ready-Set-Go",
+    "SingleContextDecisionMaking-v0": "Single Context DM",
+}
 
 
 def plot_acc(load_idx_names, tasks, accs, n_trials):
     plt.rcParams["font.family"] = "DejaVu Sans"
-    plt.rcParams.update({'font.size': 28})
+    plt.rcParams.update({"font.size": 28})
     # load_colors = (c_vals[5], c_vals[3])
-    load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6], c_vals[2])
+    # load_colors = (c_vals[5], c_vals[3], c_vals_dl[8], "#ecc94b", c_vals[6], c_vals[2])
 
-    fig1, ax1 = plt.subplots(1, 1, figsize=(24, 16))
+    _, ax1 = plt.subplots(1, 1, figsize=(24, 16))
 
-    bar_width = 0.8/len(load_idx_names)
+    bar_width = 0.8 / len(load_idx_names)
     for load_idx, _ in enumerate(load_idx_names):
         ax1.bar(
-            np.arange(len(tasks)) + bar_width * (load_idx - len(load_idx_names) / 2+.5),
+            np.arange(len(tasks))
+            + bar_width * (load_idx - len(load_idx_names) / 2 + 0.5),
             np.mean(accs[load_idx], axis=-1),
             bar_width,
             # color=load_colors[load_idx],
@@ -74,7 +79,9 @@ def plot_acc(load_idx_names, tasks, accs, n_trials):
         )
 
     ax1.set_xticks(np.arange(len(tasks)))
-    ax1.set_xticklabels(task_names[:len(tasks)], rotation=45, ha="right", fontsize=36)
+    ax1.set_xticklabels(
+        [task_names[task] for task in tasks], rotation=45, ha="right", fontsize=36
+    )
 
     ax1.set_ylim((0.4, 1.2))
     ax1.set_yticks((0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
@@ -89,10 +96,13 @@ def plot_acc(load_idx_names, tasks, accs, n_trials):
     plt.tight_layout()
     savefig("./figures", "ngym_accs", "pdf")
 
-'''
+
+"""
 Parameters:
     - batch: input data
-'''
+"""
+
+
 def plot_norm(net_type, db, batch, save_dir, save_name):
     plt.clf()
     plt.rcParams["font.family"] = "DejaVu Sans"
@@ -102,8 +112,10 @@ def plot_norm(net_type, db, batch, save_dir, save_name):
     if net_type == "FreeNet":
         M_hist = db["M"][:n_batch]  # shape: [B, T, Nh, Nx]
     elif net_type == "HebbNet_M":
-        breakpoint()
-    cue_time = np.nonzero(batch[1][:n_batch, :])[:, :2].cpu().numpy() # when label is non-zero, it is a cue time
+        raise NotImplementedError("plot norm not implemented for HebbNet_M")
+    cue_time = (
+        np.nonzero(batch[1][:n_batch, :])[:, :2].cpu().numpy()
+    )  # when label is non-zero, it is a cue time
     # cue_time = cue_time[0:1, :]
     patterns = (
         M_hist[cue_time[:, 0], cue_time[:, 1], :, :]
@@ -124,7 +136,15 @@ def plot_norm(net_type, db, batch, save_dir, save_name):
     #         s=10,
     #     )
     # breakpoint()
-    plt.scatter(patterns_pca[:, 0], patterns_pca[:, 1], s = 10, c=cluster.flatten(), cmap="Set1", alpha = 0.5, marker='.')
+    plt.scatter(
+        patterns_pca[:, 0],
+        patterns_pca[:, 1],
+        s=10,
+        c=cluster.flatten(),
+        cmap="Set1",
+        alpha=0.5,
+        marker=".",
+    )
     # plt.xlim(-3, 3)
     # plt.ylim(-3, 3)
     savefig(save_dir, save_name, "png")
@@ -138,7 +158,7 @@ def plot_pattern_gif(net_type, db, batch, save_dir, save_name):
     if net_type == "FreeNet":
         M_hist = db["M"][:n_batch]  # shape: [B, T, Nh, Nx]
     elif net_type == "HebbNet_M":
-        breakpoint()
+        raise NotImplementedError("plot pattern gif not implemented for HebbNet_M")
     T = M_hist.shape[1]
     fig = plt.figure()
 

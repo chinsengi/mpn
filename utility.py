@@ -1,16 +1,20 @@
-from net_utils import xe_classifier_accuracy
-from data import convert_serialized_mnist
+import copy
+import logging
 import os
 import pickle
-import copy
+import time
+
+import matplotlib.pyplot as plt
 import numpy as np
-import networks as nets
 import torch
-import int_data as syn
+
 import context_data as context
-from net_utils import random_weight_init
-from FreeNet import FreeNet
+import int_data as syn
+import networks as nets
 import neurogym as ngym
+from data import convert_serialized_mnist
+from FreeNet import FreeNet
+from net_utils import random_weight_init
 
 NET_TYPES = [
     "nnLSTM",
@@ -25,6 +29,7 @@ NET_TYPES = [
     "FreeNet",
 ]
 
+
 def default_params(net_params):
     # Applies default parameters. Note this was implemented only when writing
     # rebuttal, so if certain parameters are not in saved nets they are default
@@ -38,7 +43,6 @@ def default_params(net_params):
 
 
 def init_net(net_params, verbose=True, device="cpu"):
-
     # Set defaults
     net_params = default_params(net_params)
 
@@ -46,7 +50,8 @@ def init_net(net_params, verbose=True, device="cpu"):
     if net_params["netType"] == NET_TYPES[0]:  # "nnLSTM"
         net = nets.nnLSTM(
             [net_params["n_inputs"], net_params["n_hidden"], net_params["n_outputs"]],
-            batch_size=net_params["batch_size"], device=device
+            batch_size=net_params["batch_size"],
+            device=device,
         )
     elif net_params["netType"] == NET_TYPES[1]:  # "GRU"
         net = nets.GRU(
@@ -85,16 +90,30 @@ def init_net(net_params, verbose=True, device="cpu"):
         NET_TYPES[8],  # "GHU_M"
         NET_TYPES[9],  # "FreeNet"
     ):
-        if net_params["netType"] in (NET_TYPES[4], NET_TYPES[6], NET_TYPES[8]):  # "HebbNet_M", "rHebbNet_M", "GHU_M"
+        if net_params["netType"] in (
+            NET_TYPES[4],
+            NET_TYPES[6],
+            NET_TYPES[8],
+        ):  # "HebbNet_M", "rHebbNet_M", "GHU_M"
             stpType = "mult"
-        elif net_params["netType"] in (NET_TYPES[3], NET_TYPES[5], NET_TYPES[7]):  # "HebbNet", "rHebbNet", "GHU"
+        elif net_params["netType"] in (
+            NET_TYPES[3],
+            NET_TYPES[5],
+            NET_TYPES[7],
+        ):  # "HebbNet", "rHebbNet", "GHU"
             stpType = "add"
         elif net_params["netType"] == NET_TYPES[9]:  # "FreeNet"
             stpType = "free"
 
-        if net_params["netType"] in (NET_TYPES[3], NET_TYPES[4]):  # "HebbNet", "HebbNet_M"
+        if net_params["netType"] in (
+            NET_TYPES[3],
+            NET_TYPES[4],
+        ):  # "HebbNet", "HebbNet_M"
             netClass = nets.HebbNet
-        elif net_params["netType"] in (NET_TYPES[5], NET_TYPES[6]):  # "rHebbNet", "rHebbNet_M"
+        elif net_params["netType"] in (
+            NET_TYPES[5],
+            NET_TYPES[6],
+        ):  # "rHebbNet", "rHebbNet_M"
             netClass = nets.RecHebbNet
         elif net_params["netType"] in (NET_TYPES[7], NET_TYPES[8]):  # "GHU", "GHU_M"
             netClass = nets.GHU
@@ -126,7 +145,7 @@ def init_net(net_params, verbose=True, device="cpu"):
             verbose=verbose,
             batch_size=net_params["batch_size"],
             outputLayer=net_params["output_layer"],
-            winpRank = net_params.get("winp_rank", -1),
+            winpRank=net_params.get("winp_rank", -1),
             device=device,
         )
 
@@ -475,6 +494,7 @@ def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=
 
     return trainData, masks, dataset_params
 
+
 def use_gpu(gpu_id: int = 0):
     num_of_gpus = torch.cuda.device_count()
     if num_of_gpus > 0:
@@ -483,13 +503,13 @@ def use_gpu(gpu_id: int = 0):
     print(f"Using {device} device")
     return device
 
-import logging
+
 def setup_logger(save_dir, filename="stdout.txt", level=logging.INFO):
     create_dir(save_dir)
     handler1 = logging.StreamHandler()
     handler2 = logging.FileHandler(os.path.join(save_dir, filename))
     formatter = logging.Formatter(
-        "%(levelname)s - %(filename)s - %(asctime)s - %(message)s"
+        "%(levelname)s - %(filename)s:%(lineno)d - %(asctime)s - %(message)s"
     )
     handler1.setFormatter(formatter)
     handler2.setFormatter(formatter)
@@ -497,15 +517,15 @@ def setup_logger(save_dir, filename="stdout.txt", level=logging.INFO):
     logger.addHandler(handler1)
     logger.addHandler(handler2)
     logger.setLevel(level)
-    
-import matplotlib.pyplot as plt
-import time
+
+
 def create_dir(path="./model"):
     isExist = os.path.exists(path)
     if not isExist:
         print(f"Creating directory: {path}")
         os.makedirs(path)
-        
+
+
 def savefig(path="./image", filename="image", format="png", include_timestamp=True):
     create_dir(path)
     if include_timestamp:
@@ -518,4 +538,6 @@ def savefig(path="./image", filename="image", format="png", include_timestamp=Tr
         dpi=300,
         format=format,
     )
-    logging.info(f"Saving figure to {os.path.join(path, current_time + filename + '.' + format)}")
+    logging.info(
+        f"Saving figure to {os.path.join(path, current_time + filename + '.' + format)}"
+    )

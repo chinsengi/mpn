@@ -1,12 +1,23 @@
-import neurogym as ngym
-import torch
+import argparse
+import logging
+import os
+
 import numpy as np
-from utility import *
-import matplotlib.pyplot as plt
-import jetplot
-from plot_util import *
+import torch
+
+import neurogym as ngym
+from plot_util import plot_acc
+from utility import (
+    convert_ngym_dataset,
+    init_net,
+    load_net,
+    save_net,
+    setup_logger,
+    use_gpu,
+)
 
 PARAM_TYPE = ["scalar", "matrix", "eta_scalar_lam_mat", "eta_mat_lam_scalar"]
+
 
 def train_network_ngym(
     net_params,
@@ -150,9 +161,6 @@ tasks_masks = {
 }
 
 
-import argparse
-
-
 def get_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -165,10 +173,16 @@ def get_args():
         "--save_path", type=str, default="./saved_nets/", help="path to saved network."
     )
     parser.add_argument(
-        "--net_type", type=str, default="FreeNet", help="type of network."
+        "--net_type",
+        type=str,
+        default="FreeNet",
+        help="type of network used during training, ignored when eval.",
     )
     parser.add_argument(
-        "--param_type", type=str, default="matrix", help="type of lam and eta params."
+        "--param_type",
+        type=str,
+        default="matrix",
+        help="type of lam and eta params during training, ignored during eval.",
     )
     parser.add_argument(
         "--freeze_inputs",
@@ -182,8 +196,15 @@ def get_args():
         "--disable_early_stop", action="store_true", help="whether to early stop."
     )
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate.")
-    parser.add_argument("--rank", type=int, default=1, help="rank of the weight matrix in MPN.")
-    parser.add_argument("--hebb_type", type=str, default="inputOutput", help="type of Hebbian plasticity.")
+    parser.add_argument(
+        "--rank", type=int, default=1, help="rank of the weight matrix in MPN."
+    )
+    parser.add_argument(
+        "--hebb_type",
+        type=str,
+        default="inputOutput",
+        help="type of Hebbian plasticity.",
+    )
     args = parser.parse_args()
 
     return args
@@ -200,7 +221,6 @@ def main():
     datasets_params = []
 
     for task_idx, task in enumerate(tasks):
-
         # Make supervised dataset
         dataset = ngym.Dataset(task, env_kwargs=kwargs, batch_size=16, seq_len=seq_len)
 
@@ -238,7 +258,7 @@ def main():
     min_max_iter = (0, 10000)
     init_seed = 1003
     device = use_gpu()
-    
+
     if args.param_type == PARAM_TYPE[1]:
         lam_type = "matrix"
         eta_type = "matrix"
@@ -253,7 +273,7 @@ def main():
         eta_type = "matrix"
     else:
         raise ValueError(f"Unknown parameter type: {args.param_type}")
-    
+
     if train:
         for task_idx, task in enumerate(tasks):
             dataset_params = datasets_params[task_idx]
@@ -307,7 +327,6 @@ def main():
                 "epochs": 40,
             }
             for trial_idx in range(n_trials):
-
                 if dataset_params["convert_inputs"]:
                     net_params["n_inputs"] = dataset_params["input_dim"]
 
@@ -341,10 +360,10 @@ def main():
 
     load_types = [
         # "GRU/GRU[10,100,{}]_train=seq_inf_task={}_{}len",
-        # "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        "scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "eta_scalar_lam_mat/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "eta_mat_lam_scalar/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
-        "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
+        # "matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "input/matrix/FreeNet/FreeNet[10,100,{}]_train=seq_inf_task={}_{}len",
         # "scalar/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
         # "matrix/HebbNet_M/HebbNet_M[10,100,{}]_train=seq_inf_task={}_{}len",
@@ -364,7 +383,6 @@ def main():
     )
     load_idx_names = []
     for task_idx, task in enumerate(tasks):
-
         # Uses the dataset_params array created above just to specify loading name
         dataset_params = datasets_params[task_idx]
         logging.info("Task {}: {}".format(task_idx, dataset_params["dataset_name"]))
@@ -395,7 +413,7 @@ def main():
                 net_load, net_params_load, dataset_params_load = load_net(
                     load_path, init_seed + trial_idx, device=device
                 )
-                
+
                 if task_idx == 0:
                     net_type = net_params_load["netType"]
                     eta_type = net_params_load["eta_type"]
@@ -406,12 +424,18 @@ def main():
                     if net_type == "FreeNet":
                         net_type = "HPN"
                     # load_idx_names.append(fr"{net_type} $\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}")
-                    if eta_type == "scalar": eta_type = "uniform"
-                    if lam_type == "scalar": lam_type = "uniform"
-                    if eta_type == "matrix": eta_type = "hetero"
-                    if lam_type == "matrix": lam_type = "hetero"
-                    load_idx_names.append(fr"$\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}")
-                    
+                    if eta_type == "scalar":
+                        eta_type = "uniform"
+                    if lam_type == "scalar":
+                        lam_type = "uniform"
+                    if eta_type == "matrix":
+                        eta_type = "hetero"
+                    if lam_type == "matrix":
+                        lam_type = "hetero"
+                    load_idx_names.append(
+                        rf"$\eta$ {eta_type} $\lambda$ {lam_type} {freeze_type}"
+                    )
+
                 net_load.to(device)
                 # Have to recreate the dataset in dataset_params_load since its not saved
                 kwargs = {"dt": dataset_params_load["dt"]}
@@ -424,7 +448,7 @@ def main():
 
                 if "convert_inputs" not in dataset_params_load:
                     dataset_params_load["convert_inputs"] = False
-                # breakpoint()
+
                 testData, testOutputMask, _ = convert_ngym_dataset(
                     dataset_params_load,
                     set_size=1000,
@@ -432,10 +456,8 @@ def main():
                     mask_type=tasks_masks[dataset_params_load["dataset_name"]],
                 )
 
-                # db_load has the following keys: ['x', 'h_tilde', 'h', 'Wxb', 'M', 'Mx', 'y_tilde', 'out', 'acc']
-                db_load = net_load.evaluate_debug(
-                    testData[:], batchMask=testOutputMask
-                )
+                # db_load (debug_loaded_net) has the following keys: ['x', 'h_tilde', 'h', 'Wxb', 'M', 'Mx', 'y_tilde', 'out', 'acc']
+                db_load = net_load.evaluate_debug(testData[:], batchMask=testOutputMask)
                 # breakpoint()
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
                 net_type = net_params_load["netType"]
