@@ -1,17 +1,18 @@
+import importlib
 import logging
-import os, time, importlib, errno
-import matplotlib.pyplot as plt
-
-import numpy as np
+import os
+import time
 
 # from dt_utils import Timer
 # from networks import HebbDiags
 from abc import abstractmethod
+
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import TensorDataset
+from torch.utils.tensorboard import SummaryWriter
 
 # %%#################
 ### Base Classes ###
@@ -140,7 +141,8 @@ class NetworkBase(nn.Module):
             # (since rolling average is 10 monitors, 2*STEPS_BACK makes sure there are two full averages available for comparison,
             #  subtracting self.hist['monitor_thresh'][-1] prevents this threshold from being tested when a network continues training,)
             if (
-                self.hist["iter"] > minMaxIter[0] and (b//32+1) % self.monitorFreq == 0
+                self.hist["iter"] > minMaxIter[0]
+                and (b // 32 + 1) % self.monitorFreq == 0
             ):  # Only early stops when above minimum iteration count
                 if (
                     earlyStopValid
@@ -182,8 +184,7 @@ class NetworkBase(nn.Module):
                         )
                     )
                     return True
-                
-            
+
             trainBatch = trainData[b : b + batchSize, :, :]
 
             if trainOutputMask is not None:
@@ -213,7 +214,7 @@ class NetworkBase(nn.Module):
                 trainOutputMaskBatch=trainOutputMaskBatch,
                 validOutputMask=validOutputMask,
             )
-            
+
             # if earlyStop and sum(self.hist['train_acc'][-5:]) >= 4.99: #not a proper early-stop criterion but useful for infinite data regime
             #     return True
         return False
@@ -242,9 +243,9 @@ class NetworkBase(nn.Module):
 
             return self.acc_fn(masked_out, masked_y)
 
-    def average_loss(self, batch, out=None, outputMask=None):
+    def average_loss(self, batch, out=None, outputMask=None, task=None):
         """batch is (x,y) tuple of Tensors, with x.shape=[T,B,Nx] or [T,Nx]"""
-        B = batch[0].shape[0]
+        # B = batch[0].shape[0]
         if out is None:
             out = self.evaluate(batch)
 
@@ -310,7 +311,11 @@ class NetworkBase(nn.Module):
             # print('type masked y:', masked_y.type())
 
             # Flatten over batch and temporal indices
-            return self.loss_fn(masked_out, masked_y) + reg_term + param_sim_term
+            if task is None:
+                return self.loss_fn(masked_out, masked_y) + reg_term + param_sim_term
+            elif task == "ReadySetGo-v0":
+                raise NotImplementedError("Loss for ReadySetGo-v0 not implemented yet")
+                return self.loss_fn(masked_out, masked_y) + reg_term + param_sim_term
 
     @torch.no_grad()
     def _monitor_init(
@@ -501,12 +506,12 @@ class NetworkBase(nn.Module):
         return filename
 
     def load(self, filename):
-        state = torch.load(filename)
+        state = torch.load(filename, weights_only=False)
         self.hist = state.pop("hist")
 
         try:
             self.load_state_dict(state, strict=False)
-        except:
+        except Exception:
             for k in state.keys():
                 checkptParam = state[k]
 
@@ -860,17 +865,16 @@ def nan_binary_classifier_accuracy(out, y):
 # %%############
 ### Helpers ###
 ###############
-import numpy as np  # TODO: move to torch, remove numpy
 
 
 def check_dims(W, B=None):
     """Verify that the dimensions of the weight matrices are compatible"""
     dims = [W[0].shape[1]]
-    for l in range(len(W) - 1):
-        assert W[l].shape[0] == W[l + 1].shape[1]
-        dims.append(W[l].shape[0])
+    for layer in range(len(W) - 1):
+        assert W[layer].shape[0] == W[layer + 1].shape[1]
+        dims.append(W[layer].shape[0])
         if B:
-            assert W[l].shape[0] == B[l].shape[0]
+            assert W[layer].shape[0] == B[layer].shape[0]
     if B:
         assert W[-1].shape[0] == B[-1].shape[0]
     dims.append(W[-1].shape[0])
@@ -879,32 +883,34 @@ def check_dims(W, B=None):
 
 def random_weight_init(dims, bias=False):
     W, B = [], []
-    for l in range(len(dims) - 1):
-        # W.append(np.random.randn(dims[l+1], dims[l])/np.sqrt(dims[l]))
-        xavier_val = np.sqrt(6) / np.sqrt(dims[l] + dims[l + 1])
+    for layer in range(len(dims) - 1):
+        # W.append(np.random.randn(dims[l+1], dims[l])/np.sqrt(dims[layer]))
+        xavier_val = np.sqrt(6) / np.sqrt(dims[layer] + dims[layer + 1])
         W.append(
             np.random.uniform(
-                low=-xavier_val, high=xavier_val, size=(dims[l + 1], dims[l])
+                low=-xavier_val, high=xavier_val, size=(dims[layer + 1], dims[layer])
             )
         )
         if bias:
-            # B.append( np.random.randn(dims[l+1]) )
-            xavier_val_b = np.sqrt(6) / np.sqrt(dims[l + 1])
+            # B.append( np.random.randn(dims[layer+1]) )
+            xavier_val_b = np.sqrt(6) / np.sqrt(dims[layer + 1])
             B.append(
                 np.random.uniform(
-                    low=-xavier_val_b, high=xavier_val_b, size=(dims[l + 1])
+                    low=-xavier_val_b, high=xavier_val_b, size=(dims[layer + 1])
                 )
             )
         else:
-            B.append(np.zeros(dims[l + 1]))
+            B.append(np.zeros(dims[layer + 1]))
     check_dims(W, B)  # sanity check
     return W, B
 
 
 def random_weight_init_torch(dims, bias=False):
     modules = []
-    for l in range(len(dims) - 1):
-        module = nn.Linear(in_features=dims[l], out_features=dims[l + 1], bias=bias)
+    for layer in range(len(dims) - 1):
+        module = nn.Linear(
+            in_features=dims[layer], out_features=dims[layer + 1], bias=bias
+        )
         nn.init.xavier_uniform_(module.weight)
         if bias:
             nn.init.xavier_uniform_(module.bias)

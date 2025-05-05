@@ -2,11 +2,11 @@ import argparse
 import logging
 import os
 
+import neurogym as ngym
 import numpy as np
 import torch
 
-import neurogym as ngym
-from plot_util import plot_acc, plot_norm, plot_pattern_gif
+from plot_util import plot_acc, plot_norm_dm, plot_norm_readysetgo, plot_pattern_gif
 from utility import (
     convert_ngym_dataset,
     init_net,
@@ -181,7 +181,7 @@ def get_args():
     parser.add_argument(
         "--param_type",
         type=str,
-        default="matrix",
+        default="scalar",
         help="type of lam and eta params during training, ignored during eval.",
     )
     parser.add_argument(
@@ -246,7 +246,7 @@ def main():
 
         env = dataset.env
         ob_size = env.observation_space.shape[0]
-        act_size = env.action_space.n
+        act_size = env.action_space.n.item()
 
         logging.info("Task {}: {}".format(task_idx, task))
         logging.info(
@@ -293,7 +293,7 @@ def main():
 
             env = dataset_params["dataset"].env
             ob_size = env.observation_space.shape[0]
-            act_size = env.action_space.n
+            act_size = env.action_space.n.item()
 
             net_params = {
                 "netType": net_type,  # HebbNet, HebbNet_M, VanillaRNN, GRU, rHebbNet, rHebbNet_M, GHU, GHU_M, FreeNet, nnLSTM
@@ -460,28 +460,40 @@ def main():
                 if "convert_inputs" not in dataset_params_load:
                     dataset_params_load["convert_inputs"] = False
 
-                testData, testOutputMask, _ = convert_ngym_dataset(
+                testData, testOutputMask, _, unconverted_inputs = convert_ngym_dataset(
                     dataset_params_load,
                     set_size=1000,
                     device=device,
                     mask_type=tasks_masks[dataset_params_load["dataset_name"]],
+                    output_unconverted_data=True,
                 )
 
                 # db_load (debug_loaded_net) has the following keys: ['x', 'h_tilde', 'h', 'Wxb', 'M', 'Mx', 'y_tilde', 'out', 'acc']
                 db_load = net_load.evaluate_debug(testData[:], batchMask=testOutputMask)
-                # breakpoint()
                 accs[load_idx, task_idx, trial_idx] = db_load["acc"]
                 net_type = net_params_load["netType"]
                 lam_type = net_params_load["lam_type"]
                 eta_type = net_params_load["eta_type"]
-                if args.plot_norm:
-                    plot_norm(
+                if args.plot_norm and task == "ContextDecisionMaking-v0":
+                    plot_norm_dm(
                         net_type,
                         db_load,
                         testData[:],
-                        "./figures/sparseness/",
+                        "./figures/norm/",
+                        f"norms_{task}_{net_type}_{lam_type}_{eta_type}",
+                        task=task,
+                    )
+
+                if args.plot_norm and task == "ReadySetGo-v0":
+                    plot_norm_readysetgo(
+                        net_type,
+                        db_load,
+                        testData[:],
+                        unconverted_inputs,
+                        "./figures/norm/",
                         f"norms_{task}_{net_type}_{lam_type}_{eta_type}",
                     )
+
                 if args.plot_patterns_gif:
                     plot_pattern_gif(
                         net_type,

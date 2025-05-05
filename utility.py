@@ -5,13 +5,13 @@ import pickle
 import time
 
 import matplotlib.pyplot as plt
+import neurogym as ngym
 import numpy as np
 import torch
 
 import context_data as context
 import int_data as syn
 import networks as nets
-import neurogym as ngym
 from data import convert_serialized_mnist
 from FreeNet import FreeNet
 from net_utils import random_weight_init
@@ -424,12 +424,34 @@ def HebbNet_word_proj(word, As, net, toy_params):
     return h_word.numpy()
 
 
-def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=None):
+def convert_ngym_dataset(
+    dataset_params,
+    set_size=None,
+    device="cpu",
+    mask_type=None,
+    output_unconverted_data=False,
+):
     """
     This converts a neuroGym dataset into one that the code can use.
 
     Mostly just transposes the batch and sequence dimensions, then combines
-    them into a TensorDataset. Also creates a mask of all trues.
+    them into a TensorDataset.
+
+    Params:
+    dataset_params: dictionary of parameters for the dataset
+        dataset_name: name of the neuroGym dataset
+        dt: time step size
+        seq_length: length of the sequence
+        convert_inputs: whether to convert inputs to a different dimension
+        input_dim: dimension to convert inputs to
+        convert_mat: conversion matrix (optional)
+        convert_b: conversion bias (optional)
+    set_size: size of the dataset (default is None, which means use the default size)
+    device: device to use (default is "cpu")
+    mask_type: type of mask to use (default is None, which means no mask)
+        None: all True
+        label: True when labels are nonzero
+        no_fix: True when fixation is zero
     """
 
     dataset = ngym.Dataset(
@@ -438,7 +460,6 @@ def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=
         batch_size=set_size,
         seq_len=dataset_params["seq_length"],
     )
-
     inputs, labels = dataset()
 
     # Default in our setup (batch, seq_idx, :) so need to swap dims
@@ -469,6 +490,9 @@ def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=
     else:
         raise ValueError("mask type {} not recoginized".format(mask_type))
 
+    unconverted_inputs = None
+    if output_unconverted_data:
+        unconverted_inputs = np.array(inputs)
     if dataset_params["convert_inputs"]:
         # If the conversion is not already generated, create it
         if "convert_mat" not in dataset_params:
@@ -492,6 +516,8 @@ def convert_ngym_dataset(dataset_params, set_size=None, device="cpu", mask_type=
 
     trainData = torch.utils.data.TensorDataset(inputs, labels)
 
+    if output_unconverted_data:
+        return trainData, masks, dataset_params, unconverted_inputs
     return trainData, masks, dataset_params
 
 

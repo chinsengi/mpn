@@ -98,12 +98,14 @@ def plot_acc(load_idx_names, tasks, accs, n_trials):
 
 
 """
+Plot the patterns in the FreeNet model for decision making task.
 Parameters:
     - batch: input data
 """
 
 
-def plot_norm(net_type, db, batch, save_dir, save_name):
+def plot_norm_dm(net_type, db, batch, save_dir, save_name, task):
+    assert task in ["ContextDecisionMaking-v0"]
     plt.clf()
     plt.rcParams["font.family"] = "DejaVu Sans"
     n_batch = 2
@@ -145,6 +147,50 @@ def plot_norm(net_type, db, batch, save_dir, save_name):
     )
     # plt.xlim(-3, 3)
     # plt.ylim(-3, 3)
+    savefig(save_dir, save_name, "png")
+
+
+def plot_norm_readysetgo(net_type, db, batch, raw_input, save_dir, save_name):
+    plt.clf()
+    plt.rcParams["font.family"] = "DejaVu Sans"
+    n_batch = 1
+    raw_input = raw_input[:n_batch]
+    if net_type == "FreeNet":
+        M_hist = db["M"][:n_batch].cpu().numpy()  # shape: [B, T, Nhidden, Ninput]
+    elif net_type in ["HebbNet_M", "GRU"]:
+        raise NotImplementedError("plot norm not implemented for HebbNet_M")
+    # breakpoint()
+    # raw_input shape: [B, T, 3]
+    ready_time = np.nonzero(raw_input[:n_batch, :, 1])[1]
+    set_time = np.nonzero(raw_input[:n_batch, :, 2])[1]
+    go_time = (
+        (np.nonzero(batch[1][:n_batch, :, 0])[:, 1]).cpu().numpy()
+    )  # when label is non-zero, it is a cue time
+    t = np.arange(M_hist.shape[1])
+    norms = np.linalg.norm(M_hist, axis=-1)
+    # breakpoint()
+    plt.plot(t, norms.mean(-1).flatten(), label="norm")
+    plt.vlines(
+        ready_time,
+        *plt.ylim(),
+        color="red",
+        label="ready time",
+    )
+    plt.vlines(
+        set_time,
+        *plt.ylim(),
+        color="blue",
+        label="set time",
+    )
+    plt.vlines(
+        go_time,
+        *plt.ylim(),
+        color="green",
+        label="go time",
+    )
+    plt.legend()
+    plt.xlabel("Time")
+    plt.ylabel("Norm")
     savefig(save_dir, save_name, "png")
 
 

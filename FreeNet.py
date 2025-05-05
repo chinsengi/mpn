@@ -1,18 +1,12 @@
 import logging
-import itertools
-import torch
-from torch import nn
-from torch.utils.data import TensorDataset
-import torch.nn.functional as F
-import numpy as np
-import scipy.special as sps
+import math
 
-from net_utils import (
-    StatefulBase,
-    random_weight_init,
-    xe_classifier_accuracy,
-    random_weight_init_torch,
-)
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+from net_utils import StatefulBase, random_weight_init, xe_classifier_accuracy
 
 
 class FreeLayer(nn.Module):
@@ -24,7 +18,7 @@ class FreeLayer(nn.Module):
     def __init__(self, init, verbose=True, **mpnArgs):
         super().__init__()
 
-        if all([type(x) == int for x in init]) and len(init) == 2:
+        if all([type(x) is int for x in init]) and len(init) == 2:
             Nx, Ny = init
             W, b = random_weight_init([Nx, Ny], bias=True)
             # self.layerBias = mpnArgs.get('layerBias', True)
@@ -164,7 +158,9 @@ class FreeLayer(nn.Module):
             # self.register_buffer(
             #     "M0", torch.zeros_like(torch.tensor(W2[0], dtype=torch.float))
             # )
-            self.M0 = nn.Parameter(torch.tensor(W2[0], dtype=torch.float), requires_grad=False)
+            self.M0 = nn.Parameter(
+                torch.tensor(W2[0], dtype=torch.float), requires_grad=False
+            )
             # self.M0 = torch.zeros_like(torch.tensor(W2[0], dtype=torch.float))
             # self.M0 = torch.tensor(W2[0], dtype=torch.float, requires_grad=False)
             # self.register_buffer(
@@ -199,7 +195,9 @@ class FreeLayer(nn.Module):
                 mpnArgs.get("batch_size", 1)
             )  # Sets Hebbian weights to initial values (M0)
         except AttributeError as e:
-            logging.warning("Warning: {}. Not running reset_state() in mpnNet.__init__".format(e))
+            logging.warning(
+                "Warning: {}. Not running reset_state() in mpnNet.__init__".format(e)
+            )
 
         self.register_buffer("plastic", torch.tensor(True))
         self.register_buffer(
@@ -220,7 +218,6 @@ class FreeLayer(nn.Module):
         self.M = self.M * self.M0.unsqueeze(0)  # (B, Ny, Nx) x (1, Ny, Nx)
 
     def init_sm_matrix(self):
-
         # Initialize different forms of eta parameter
         if self.etaType == "scalar":
             _, b_eta = random_weight_init(
@@ -279,13 +276,18 @@ class FreeLayer(nn.Module):
             )  # eta = exp(_eta)
             self.eta = torch.exp(self._eta)
         else:  # Unconstrained eta
-            self._eta = nn.Parameter(torch.tensor(eta, dtype=torch.float), requires_grad=not self.freezeInputs)
+            self._eta = nn.Parameter(
+                torch.tensor(eta, dtype=torch.float),
+                requires_grad=not self.freezeInputs,
+            )
             # self.register_buffer('_eta', torch.tensor(-1.0, dtype=torch.float)) # Anti-hebbian
             # self.register_buffer("_eta", torch.tensor(1.0, dtype=torch.float))
-            self.eta = self._eta.data   
+            self.eta = self._eta.data
 
         # Setting lambda parameter
-        self._lam = nn.Parameter(torch.tensor(lam, dtype=torch.float), requires_grad=not self.freezeInputs)
+        self._lam = nn.Parameter(
+            torch.tensor(lam, dtype=torch.float), requires_grad=not self.freezeInputs
+        )
         # self._lam = nn.Parameter(torch.ones_like(torch.tensor(lam, dtype=torch.float)), requires_grad=False)
         self.lam = self._lam.data
 
@@ -353,7 +355,6 @@ class FreeLayer(nn.Module):
 
         """
 
-
         # print('M', self.M.shape)
         # print('x', x.shape)
         # print('b1', self.b1.shape)
@@ -366,8 +367,7 @@ class FreeLayer(nn.Module):
             self.useCellTypes
         ):  # First multiplication removes signs, then clamps, then restores them
             self.M = (
-                torch.clamp(self.M * self.cellTypes, min=0.0, max=1e6)
-                * self.cellTypes
+                torch.clamp(self.M * self.cellTypes, min=0.0, max=1e6) * self.cellTypes
             )
 
         assert self.sparsification == 0.0, "Weight sparsification not implemented yet"
@@ -404,7 +404,7 @@ class FreeNet(StatefulBase):
     def __init__(self, init, verbose=True, **mpnArgs):
         super().__init__()
 
-        if all([type(x) == int for x in init]) and len(init) == 3:
+        if all([type(x) is int for x in init]) and len(init) == 3:
             Nx, Nh, Ny = init
             self.n_inputs = Nx
             self.n_hidden = Nh
@@ -468,9 +468,9 @@ class FreeNet(StatefulBase):
             self.verbose
         ):  # Full summary of readout parameters (MP layer prints out internally)
             logging.info(init_string)
-            
+
         self.device = mpnArgs.get("device", "cuda")
-            
+
     def load(self, filename):
         super(FreeNet, self).load(filename)
         # self.update_hebb(torch.tensor([0.]),torch.tensor([0.])) # to get self.eta right if forceHebb/forceAnti used
@@ -492,7 +492,6 @@ class FreeNet(StatefulBase):
         A.shape=[B,Nh,Nx],
 
         """
-
 
         # print('M', self.M.shape)
         # print('x', x.shape)
@@ -622,9 +621,8 @@ class FreeNet(StatefulBase):
         )
         # out = torch.empty_like(batch[1])
         for time_idx in range(batch[0].shape[1]):
-
             x = batch[0][:, time_idx, :]  # [B, Nx]
-            y = batch[1][:, time_idx, :]  # [B, Ny]
+            # y = batch[1][:, time_idx, :]  # [B, Ny]
             # print('x shape', x.shape)
             # print('y shape', y.shape)
             out[:, time_idx] = self(x)
@@ -634,7 +632,7 @@ class FreeNet(StatefulBase):
     @torch.no_grad()
     def evaluate_debug(self, batch, batchMask=None, acc=True, reset=True):
         """
-        Runs a full sequence of the given batch size through the network, but now keeps track of all 
+        Runs a full sequence of the given batch size through the network, but now keeps track of all
         sorts of parameters
         """
         B = batch[0].shape[0]
@@ -657,7 +655,7 @@ class FreeNet(StatefulBase):
         }
         for time_idx in range(batch[0].shape[1]):
             x = batch[0][:, time_idx, :]  # [B, Nx]
-            y = batch[1][:, time_idx, :]
+            # y = batch[1][:, time_idx, :]
 
             db["x"][:, time_idx, :] = x
             # # Note A for this given time_idx was updated on the previous pass (so A[time_idx=0] will be A0)
@@ -668,6 +666,7 @@ class FreeNet(StatefulBase):
                 db["out"][:, time_idx, :],
                 db["M"][:, time_idx, :],
             ) = self(x, debug=True)
+
             db["Mx"][:, time_idx, :] = torch.bmm(
                 self.mp_layer.M, x.unsqueeze(2)
             ).squeeze(2)
@@ -680,9 +679,9 @@ class FreeNet(StatefulBase):
             ).item()
         return db
 
-import math
+
 def xavier_init(layer: nn.Linear):
-    stdv = 1. / math.sqrt(layer.weight.size(1))
+    stdv = 1.0 / math.sqrt(layer.weight.size(1))
     layer.weight.data.uniform_(-stdv, stdv)
     if layer.bias is not None:
         layer.bias.data.uniform_(-stdv, stdv)
